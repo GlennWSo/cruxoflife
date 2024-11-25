@@ -125,6 +125,7 @@
         toolchain
         rust-analyzer
         bacon
+        cargo-insta
 
         cargo-ndk
         cargo-apk
