@@ -1,49 +1,46 @@
-// ANCHOR: app
-
-use crux_core::{render::Render, App};
+use crux_core::{
+    macros::{Effect, Export},
+    render::Render,
+    App,
+};
 use serde::{Deserialize, Serialize};
+
+#[derive(Default)]
+pub struct Hello;
+
+#[derive(Default)]
+pub struct Model;
 
 #[derive(Serialize, Deserialize)]
 pub enum Event {
     None,
 }
 
-#[derive(Default)]
-pub struct Model;
-
-#[derive(Serialize, Deserialize)]
-pub struct ViewModel {
-    data: String,
-}
-
-#[derive(crux_core::macros::Effect)]
-pub struct Capabilities {
+#[derive(Effect)]
+pub struct Capabilites {
     render: Render<Event>,
 }
 
-#[derive(Default)]
-pub struct Hello;
-
+#[derive(Serialize, Deserialize)]
+pub struct ViewModel {
+    greeting: String,
+}
 impl App for Hello {
-    type Event = Event;
     type Model = Model;
+    type Capabilities = Capabilites;
+    type Event = Event;
     type ViewModel = ViewModel;
-    type Capabilities = Capabilities;
 
-    fn update(&self, _event: Self::Event, _model: &mut Self::Model, caps: &Self::Capabilities) {
-        caps.render.render();
+    fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
+        caps.render.render()
     }
 
-    fn view(&self, _model: &Self::Model) -> Self::ViewModel {
+    fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
-            data: "Hello World".to_string(),
+            greeting: "Hello, World!".to_string(),
         }
     }
 }
-
-// ANCHOR_END: app
-
-// ANCHOR: test
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,10 +58,8 @@ mod tests {
         update.expect_one_effect().expect_render();
 
         // Make sure the view matches our expectations
-        let actual_view = &hello.view(&model).data;
-        let expected_view = "Hello World";
+        let actual_view = &hello.view(&model).greeting;
+        let expected_view = "Hello, World!";
         assert_eq!(actual_view, expected_view);
     }
 }
-
-// ANCHOR_END: test
