@@ -55,7 +55,6 @@ impl App for Counter {
         match event {
             Event::Get => {
                 caps.http.get(API_URL).expect_json().send(Event::Set);
-                return;
             }
             Event::Increment => {
                 model.count.value += 1;
