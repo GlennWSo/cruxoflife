@@ -122,10 +122,12 @@
         startApk
         oneUp
 
-        cargo-ndk
-        cargo-apk
         toolchain
         rust-analyzer
+        bacon
+
+        cargo-ndk
+        cargo-apk
         glib
         wasm-pack
         pnpm
