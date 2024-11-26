@@ -1,6 +1,6 @@
 use chrono::serde::ts_milliseconds_option::deserialize as ts_milliseconds_option;
 use chrono::{DateTime, Utc};
-use crux_core::{macros::Effect, render::Render, App};
+use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
@@ -9,9 +9,9 @@ const INC_API: &str = "https://crux-counter.fly.dev/inc";
 const DEC_API: &str = "https://crux-counter.fly.dev/dec";
 
 #[derive(Default)]
-pub struct Counter;
+pub struct App;
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
 pub struct Count {
     value: i32,
     #[serde(deserialize_with = "ts_milliseconds_option")]
@@ -23,7 +23,7 @@ pub struct Model {
     count: Count,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
     Increment,
     Decrement,
@@ -34,6 +34,7 @@ pub enum Event {
     Set(crux_http::Result<crux_http::Response<Count>>),
 }
 
+#[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
 #[derive(Effect)]
 pub struct Capabilites {
     pub render: Render<Event>,
@@ -45,7 +46,7 @@ pub struct ViewModel {
     count: String,
     confirmed: bool,
 }
-impl App for Counter {
+impl crux_core::App for App {
     type Model = Model;
     type Capabilities = Capabilites;
     type Event = Event;
@@ -100,7 +101,7 @@ mod tests {
 
     #[test]
     fn renders() {
-        let app = AppTester::<Counter, _>::default();
+        let app = AppTester::<App, _>::default();
         let mut model = Model::default();
 
         let update = app.update(Event::Increment, &mut model);
@@ -111,7 +112,7 @@ mod tests {
 
     #[test]
     fn shows_initial_count() {
-        let app = AppTester::<Counter, _>::default();
+        let app = AppTester::<App, _>::default();
         let model = Model::default();
 
         let actual_view = app.view(&model).count;
@@ -121,7 +122,7 @@ mod tests {
 
     #[test]
     fn resets_count() {
-        let app = AppTester::<Counter, _>::default();
+        let app = AppTester::<App, _>::default();
         let mut model = Model::default();
         let _ = app.update(Event::Increment, &mut model);
         let expected_view = "0 Pending...";
@@ -147,7 +148,7 @@ mod tests {
 
     #[test]
     fn counts_up_and_down() {
-        let app = AppTester::<Counter, _>::default();
+        let app = AppTester::<App, _>::default();
         let mut model = Model::default();
 
         let _ = app.update(Event::Increment, &mut model);
