@@ -10,8 +10,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,7 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.counter.shared_types.Event
 import com.example.counter.ui.theme.CounterTheme
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,26 +58,60 @@ fun View(core: Core = viewModel()) {
     Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green)){
 
         val canvasQuadrantSize = size / 2F
+        val h = size.height
+        val w = size.width
+        val cellSize = 30f
+
+        val nCols = (w / cellSize ).roundToInt()
+        val nRows = (h / cellSize ).roundToInt()
+
+        repeat(nCols + 1) {
+            drawLine(
+                strokeWidth = 3f,
+                color = Color.Black,
+                start = Offset(x = cellSize * it, y = 0f),
+                end = Offset(x = cellSize * it, y = h),
+                colorFilter = ColorFilter.tint(Color.Black)
+            )
+        }
+        repeat(nRows + 1) {
+            drawLine(
+                strokeWidth = 3f,
+                color = Color.Black,
+                start = Offset(y = cellSize * it, x = 0f),
+                end = Offset(y = cellSize * it, x = h),
+                colorFilter = ColorFilter.tint(Color.Black)
+            )
+        }
+
         // Draw a rectangle
-        drawRect(color = Color.Magenta, size = canvasQuadrantSize)
+        // drawRect(color = Color.Magenta, size = canvasQuadrantSize)
         // Draw a circle
-        drawCircle(color = Color.Cyan, radius = 400f)
+        // drawCircle(color = Color.Cyan, radius = 400f)
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(10.dp).fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
     ) {
-        Text(text = "Crux Game of Life", fontSize = 30.sp, modifier = Modifier.padding(10.dp))
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().background(color = Color.White)) {
+            Text(text = "Crux Game of Life", fontSize = 30.sp, modifier = Modifier.padding(10.dp).background(color = Color.White))
+
+        }
+
         // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
         Spacer(
             modifier = Modifier.weight(1f)
         )
-        Row( modifier = Modifier.padding(bottom = 30.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Row( modifier = Modifier.fillMaxWidth().background(color=Color.White),
+            horizontalArrangement = Arrangement.Center
             ) {
             Button(
+                modifier = Modifier.padding(10.dp),
                 onClick = {
                     coroutineScope.launch { core.update(Event.Decrement()) }
                 }, colors = ButtonDefaults.buttonColors(
@@ -81,6 +119,7 @@ fun View(core: Core = viewModel()) {
                 )
             ) { Text(text = "Decrement", color = Color.DarkGray) }
             Button(
+                modifier = Modifier.padding(10.dp),
                 onClick = {
                     coroutineScope.launch { core.update(Event.Increment()) }
                 }, colors = ButtonDefaults.buttonColors(
