@@ -5,8 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -47,21 +51,28 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun View(core: Core = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
+    Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green)){
+
+        val canvasQuadrantSize = size / 2F
+        // Draw a rectangle
+        drawRect(color = Color.Magenta, size = canvasQuadrantSize)
+        // Draw a circle
+        drawCircle(color = Color.Cyan, radius = 400f)
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(10.dp),
+        modifier = Modifier.padding(10.dp).fillMaxSize(),
     ) {
-        Text(text = "Crux Counter Example", fontSize = 30.sp, modifier = Modifier.padding(10.dp))
-        Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
-        Text(
-            text = core.view?.count ?: "-", color = if (core.view?.confirmed == true) {
-                Color.Unspecified
-            } else {
-                Color.Gray
-            }, modifier = Modifier.padding(10.dp)
+        Text(text = "Crux Game of Life", fontSize = 30.sp, modifier = Modifier.padding(10.dp))
+        // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
+        Spacer(
+            modifier = Modifier.weight(1f)
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row( modifier = Modifier.padding(bottom = 30.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
             Button(
                 onClick = {
                     coroutineScope.launch { core.update(Event.Decrement()) }

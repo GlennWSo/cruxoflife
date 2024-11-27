@@ -137,6 +137,7 @@
 
         (android-studio.withSdk android.androidsdk)
         ktlint
+        kotlin-language-server
         # gradle_8
         jdk21
         usbutils
