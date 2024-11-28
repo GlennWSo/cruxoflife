@@ -1,5 +1,6 @@
 use std::borrow::BorrowMut;
 use std::collections::HashSet;
+use std::ops::BitOr;
 
 use chrono::serde::ts_milliseconds_option::deserialize as ts_milliseconds_option;
 use chrono::{DateTime, Utc};
@@ -34,13 +35,30 @@ pub struct Life {
 
 impl Default for Life {
     fn default() -> Self {
-        let mut life = Self::blinker();
+        let mut life = Self::glider();
         life.translate(&[5, 5]);
         life
     }
 }
 
+impl BitOr for Life {
+    type Output = Life;
+    fn bitor(mut self, mut rhs: Self) -> Self::Output {
+        // let cells = self.cells.union(&rhs.cells).into();
+        self.cells.extend(rhs.cells.drain());
+        // let cells = self.cells.extend()
+        let buffer = self.buffer;
+        Self {
+            cells: self.cells,
+            buffer,
+        }
+    }
+}
+
 impl Life {
+    // fn merge(&self, other: Life) {
+    //     let derp = self.or(other);
+    // }
     fn translate(&mut self, delta: &CellCoord) {
         self.buffer.clear();
         self.buffer.extend(
@@ -56,25 +74,24 @@ impl Life {
             buffer: Vec::new(),
         }
     }
-    fn blinker() -> Self {
-        let mut life = Self::empty();
-        life.add_cells(&[[0, -1], [0, 0], [0, 1]]);
-        life
-    }
-    fn tub() -> Self {
-        let mut life = Self::empty();
-        life.add_cells(&[[0, -1], [0, 1], [-1, 0], [1, 0]]);
-        life
-    }
     fn add_cells(&mut self, spawns: &[CellCoord]) {
         for cell in spawns {
             self.cells.insert(*cell);
         }
     }
     fn new(init_life: &[CellCoord]) -> Self {
-        let mut game = Self::default();
+        let mut game = Self::empty();
         game.add_cells(init_life);
         game
+    }
+    fn blinker() -> Self {
+        Self::new(&[[0, -1], [0, 0], [0, 1]])
+    }
+    fn tub() -> Self {
+        Self::new(&[[0, -1], [0, 1], [-1, 0], [1, 0]])
+    }
+    fn glider() -> Self {
+        Self::new(&[[0, 0], [-1, 1], [-1, 2], [0, 2], [1, 2]])
     }
     fn adjecents(coord: &CellCoord) -> [CellCoord; 8] {
         let [row, col] = coord;
@@ -205,7 +222,6 @@ mod test_life {
 pub struct Model {
     count: Count,
     life: Life,
-    run: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -214,7 +230,7 @@ pub enum Event {
     Decrement,
     Get,
     Step,
-    ToggleSimulation(bool),
+    SpawnGlider(CellCoord),
 
     /// this event is private to the core
     #[serde(skip)]
@@ -244,7 +260,6 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
-            Event::ToggleSimulation(val) => model.run = val,
             Event::Get => {
                 caps.http.get(API_URL).expect_json().send(Event::Set);
             }
@@ -270,6 +285,7 @@ impl crux_core::App for App {
                 model.count = response.take_body().unwrap();
                 caps.render.render()
             }
+            Event::SpawnGlider(coord) => todo!(),
             Event::Set(Err(e)) => {
                 panic!("Oh no: {}", e);
             }
@@ -339,9 +355,11 @@ mod tests {
           count: "0 Confirmed: 1970-01-01 00:00:00 UTC",
           confirmed: true,
           life: [
+            (4, 7),
+            (5, 7),
+            (6, 7),
+            (4, 6),
             (5, 5),
-            (5, 4),
-            (5, 6),
           ],
         )
         "#);
