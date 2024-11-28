@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,12 +66,27 @@ fun View(core: Core = viewModel()) {
         val nCols = (w / cellSize ).roundToInt()
         val nRows = (h / cellSize ).roundToInt()
 
-        repeat(nCols + 1) {
+        repeat(nCols + 1)  { col ->
+            repeat(nRows + 1)  { row ->
+            val derp = core.view?.life?.contains(listOf(row, col)) ?: true
+            if (derp) {
+                drawRect(
+                    color = Color.Black,
+                    size = Size(cellSize, cellSize),
+                    topLeft = Offset(
+                        y = cellSize * row,
+                        x = cellSize * col,
+                    )
+                )
+            }
+        }
+
+
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
-                start = Offset(x = cellSize * it, y = 0f),
-                end = Offset(x = cellSize * it, y = h),
+                start = Offset(x = cellSize * col, y = 0f),
+                end = Offset(x = cellSize * col, y = h),
                 colorFilter = ColorFilter.tint(Color.Black)
             )
         }
@@ -111,7 +127,7 @@ fun View(core: Core = viewModel()) {
             horizontalArrangement = Arrangement.Center
             ) {
             Button(
-                modifier = Modifier.padding(10.dp),
+                modifier = Modifier.padding(10.dp).padding(bottom = 30.dp),
                 onClick = {
                     coroutineScope.launch { core.update(Event.Decrement()) }
                 }, colors = ButtonDefaults.buttonColors(
