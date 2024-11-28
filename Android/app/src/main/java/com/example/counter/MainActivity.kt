@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,7 +46,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.counter.shared_types.Event
 import com.example.counter.ui.theme.CounterTheme
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,29 +68,38 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+fun Offset.rotateBy(angle: Float): Offset {
+    val angleInRadians = angle * (PI / 180)
+    val cos = cos(angleInRadians)
+    val sin = sin(angleInRadians)
+    return Offset((x * cos - y * sin).toFloat(), (x * sin + y * cos).toFloat())
+}
+
 @Composable
 fun View(core: Core = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(false) }
-    val cellSize = 30f
 
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    // var offsetY by remember { mutableStateOf(0f) }
+    var zoom by remember { mutableStateOf(1f) }
+    var cellSize = 30f * zoom
+
     Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green).pointerInput(Unit){
         detectTapGestures(onTap = { location ->
-            val col = ((location.x - offsetX)/ cellSize).roundToInt()
-            val row = ((location.y - offsetY)/ cellSize).roundToInt()
+            val col = ((location.x - offset.x)/ cellSize / zoom).roundToInt()
+            val row = ((location.y - offset.y)/ cellSize / zoom).roundToInt()
 
             val cell = listOf(row, col)
             coroutineScope.launch { core.update(Event.ToggleCell(cell)) }
         })
     }.pointerInput(Unit) {
-        detectDragGestures { change, dragAmount ->
-            change.consume()
-            offsetX += dragAmount.x
-            offsetY += dragAmount.y
-        }
-
+        detectTransformGestures(onGesture = { centroid, pan, gestureZoom, gestureRotate ->
+            val newScale = zoom * gestureZoom
+             offset = offset + pan
+            zoom = newScale
+        })
     } ){
         if (checked) {
             coroutineScope.launch { core.update(Event.Step()) }
@@ -106,14 +119,14 @@ fun View(core: Core = viewModel()) {
                 color = Color.Black,
                 size = Size(cellSize, cellSize),
                 topLeft = Offset(
-                    y = cellSize * row + offsetY,
-                    x = cellSize * col + offsetX,
+                    y = cellSize * row + offset.y,
+                    x = cellSize * col + offset.x,
                 )
             )
         }
 // draw cell borders
         repeat(nCols + 1)  { col ->
-            val x: Float = cellSize*col + offsetX % cellSize
+            val x: Float = cellSize*col + offset.x % cellSize
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
@@ -123,7 +136,7 @@ fun View(core: Core = viewModel()) {
             )
         }
         repeat(nRows + 1) {
-            val y = cellSize * it + offsetY % cellSize
+            val y = cellSize * it + offset.y % cellSize
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
