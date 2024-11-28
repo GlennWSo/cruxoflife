@@ -7,6 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,16 +68,32 @@ class MainActivity : ComponentActivity() {
 fun View(core: Core = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(false) }
-        // Call your suspend function here
+    val cellSize = 30f
 
-    Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green)){
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+    Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green).pointerInput(Unit){
+        detectTapGestures(onTap = { location ->
+            val col = ((location.x - offsetX)/ cellSize).roundToInt()
+            val row = ((location.y - offsetY)/ cellSize).roundToInt()
+
+            val cell = listOf(row, col)
+            coroutineScope.launch { core.update(Event.ToggleCell(cell)) }
+        })
+    }.pointerInput(Unit) {
+        detectDragGestures { change, dragAmount ->
+            change.consume()
+            offsetX += dragAmount.x
+            offsetY += dragAmount.y
+        }
+
+    } ){
         if (checked) {
             coroutineScope.launch { core.update(Event.Step()) }
         }
         val canvasQuadrantSize = size / 2F
         val h = size.height
         val w = size.width
-        val cellSize = 30f
 
         val nCols = (w / cellSize ).roundToInt()
         val nRows = (h / cellSize ).roundToInt()
@@ -85,27 +106,29 @@ fun View(core: Core = viewModel()) {
                 color = Color.Black,
                 size = Size(cellSize, cellSize),
                 topLeft = Offset(
-                    y = cellSize * row,
-                    x = cellSize * col,
+                    y = cellSize * row + offsetY,
+                    x = cellSize * col + offsetX,
                 )
             )
         }
 // draw cell borders
         repeat(nCols + 1)  { col ->
+            val x: Float = cellSize*col + offsetX % cellSize
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
-                start = Offset(x = cellSize * col, y = 0f),
-                end = Offset(x = cellSize * col, y = h),
+                start = Offset(x, y = 0f),
+                end = Offset(x = x, y = h),
                 colorFilter = ColorFilter.tint(Color.Black)
             )
         }
         repeat(nRows + 1) {
+            val y = cellSize * it + offsetY % cellSize
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
-                start = Offset(y = cellSize * it, x = 0f),
-                end = Offset(y = cellSize * it, x = h),
+                start = Offset(y = y, x = 0f),
+                end = Offset(y = y, x = w),
                 colorFilter = ColorFilter.tint(Color.Black)
             )
         }
@@ -141,15 +164,11 @@ fun View(core: Core = viewModel()) {
                 Text(text = "Play", color = Color.Black)
             }
 
-
-
-
-
             Button(
                 modifier = Modifier.padding(15.dp),
                 onClick = {
-                    coroutineScope.launch { core.update(Event.Increment()) }
                     coroutineScope.launch { core.update(Event.Step()) }
+                    checked = false
                 }, colors = ButtonDefaults.buttonColors(
                     containerColor = Color.hsl(348F, 0.86F, 0.61F)
                 )

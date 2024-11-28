@@ -162,6 +162,11 @@ impl Life {
         self.kill_cells();
         self.insert_saved();
     }
+    fn toggle_cell(&mut self, coord: CellCoord) {
+        if !self.cells.remove(&coord) {
+            self.cells.insert(coord);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -237,6 +242,7 @@ pub enum Event {
     Decrement,
     Get,
     Step,
+    ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
 
     /// this event is private to the core
@@ -267,6 +273,10 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::ToggleCell(coord) => {
+                model.life.toggle_cell(coord);
+                caps.render.render();
+            }
             Event::Get => {
                 caps.http.get(API_URL).expect_json().send(Event::Set);
             }
