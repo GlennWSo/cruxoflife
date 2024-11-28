@@ -1,3 +1,6 @@
+use std::borrow::BorrowMut;
+use std::collections::HashSet;
+
 use chrono::serde::ts_milliseconds_option::deserialize as ts_milliseconds_option;
 use chrono::{DateTime, Utc};
 use crux_core::{macros::Effect, render::Render};
@@ -16,6 +19,130 @@ pub struct Count {
     value: i32,
     #[serde(deserialize_with = "ts_milliseconds_option")]
     updated_at: Option<DateTime<Utc>>,
+}
+
+/// [row, col]
+/// rows are top to bottom
+/// cols are left to right
+type CellCoord = [i32; 2];
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
+pub struct Life {
+    cells: HashSet<CellCoord>,
+    spawns: Vec<CellCoord>,
+}
+
+impl Life {
+    fn add_cells(&mut self, spawns: &[CellCoord]) {
+        for cell in spawns {
+            self.cells.insert(*cell);
+        }
+    }
+    fn new(init_life: &[CellCoord]) -> Self {
+        let mut game = Self::default();
+        game.add_cells(init_life);
+        game
+    }
+    fn adjecents(coord: &CellCoord) -> [CellCoord; 8] {
+        let [row, col] = coord;
+        [
+            [row - 1, col - 1],
+            [row - 1, col + 0],
+            [row - 1, col + 1],
+            //
+            [row + 0, col - 1],
+            // [row + 0, col + 0],
+            [row + 0, col + 1],
+            //
+            [row + 1, col - 1],
+            [row + 1, col + 0],
+            [row + 1, col + 1],
+        ]
+    }
+    fn cell_birth(&self, coord: &CellCoord) -> bool {
+        let adjs = Self::adjecents(coord);
+        let count = adjs
+            .into_iter()
+            .filter(|c| self.cells.get(c).is_some())
+            .count() as u8;
+        count == 3
+    }
+    fn save_spawns(&mut self) {
+        // self.spawns.clear();
+        self.spawns = self
+            .cells
+            .iter()
+            .flat_map(|cell| Self::adjecents(cell))
+            .filter(|cell| self.cells.get(cell).is_none())
+            .filter(|cell| self.cell_birth(cell))
+            .collect();
+    }
+    fn insert_saved(&mut self) {
+        for cell in self.spawns.drain(..) {
+            self.cells.insert(cell);
+        }
+    }
+    fn cell_survive(&self, coord: &CellCoord) -> bool {
+        let adjs = Self::adjecents(coord);
+        let count = adjs
+            .into_iter()
+            .filter(|c| self.cells.get(c).is_some())
+            .count() as u8;
+        count == 2 || count == 3
+    }
+    fn kill_cells(&mut self) {
+        let survivors: Box<[_]> = self
+            .cells
+            .iter()
+            .filter(|cell| self.cell_survive(cell))
+            .copied()
+            .collect();
+        self.cells.clear();
+        self.cells.extend(survivors);
+    }
+    fn tick(&mut self) {
+        self.save_spawns();
+        self.kill_cells();
+        self.insert_saved();
+    }
+}
+
+#[cfg(test)]
+mod test_life {
+    use super::*;
+    fn blinker() -> Life {
+        let mut life = Life::default();
+        life.add_cells(&[[0, -1], [0, 0], [0, 1]]);
+        life
+    }
+    #[test]
+    fn test_blinker_tick() {
+        let mut life = blinker();
+        {
+            life.tick();
+            let mut tick: Vec<_> = life.cells.iter().copied().collect();
+            tick.sort();
+            insta::assert_ron_snapshot!(tick, @r#"
+            [
+              (-1, 0),
+              (0, 0),
+              (1, 0),
+            ]
+            "#);
+        }
+        {
+            life.tick();
+            let mut tick: Vec<_> = life.cells.iter().copied().collect();
+            tick.sort();
+            insta::assert_ron_snapshot!(tick, @r#"
+            [
+              (0, -1),
+              (0, 0),
+              (0, 1),
+            ]
+            "#);
+        }
+    }
 }
 
 #[derive(Default)]
@@ -37,7 +164,9 @@ pub enum Event {
 #[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
 #[derive(Effect)]
 pub struct Capabilites {
+    /// capable of telling shell that viewmodel has been updated for the next rendering
     pub render: Render<Event>,
+    /// capable of asking shell to preform http requests
     pub http: Http<Event>,
 }
 
