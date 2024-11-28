@@ -26,13 +26,35 @@ pub struct Count {
 /// cols are left to right
 type CellCoord = [i32; 2];
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Life {
     cells: HashSet<CellCoord>,
     spawns: Vec<CellCoord>,
 }
 
+impl Default for Life {
+    fn default() -> Self {
+        Self::blinker()
+    }
+}
+
 impl Life {
+    fn empty() -> Self {
+        Self {
+            cells: HashSet::new(),
+            spawns: Vec::new(),
+        }
+    }
+    fn blinker() -> Self {
+        let mut life = Self::empty();
+        life.add_cells(&[[0, -1], [0, 0], [0, 1]]);
+        life
+    }
+    fn tub() -> Self {
+        let mut life = Self::empty();
+        life.add_cells(&[[0, -1], [0, 1], [-1, 0], [1, 0]]);
+        life
+    }
     fn add_cells(&mut self, spawns: &[CellCoord]) {
         for cell in spawns {
             self.cells.insert(*cell);
@@ -110,20 +132,10 @@ impl Life {
 #[cfg(test)]
 mod test_life {
     use super::*;
-    fn blinker() -> Life {
-        let mut life = Life::default();
-        life.add_cells(&[[0, -1], [0, 0], [0, 1]]);
-        life
-    }
-    fn tub() -> Life {
-        let mut life = Life::default();
-        life.add_cells(&[[0, -1], [0, 1], [-1, 0], [1, 0]]);
-        life
-    }
     #[test]
     /// make sure static life is static
     fn test_tub() {
-        let mut life = tub();
+        let mut life = Life::tub();
         let expected = life.clone();
         for _ in 0..17 {
             life.tick();
@@ -132,7 +144,7 @@ mod test_life {
     }
     #[test]
     fn test_blinker_tick() {
-        let mut life = blinker();
+        let mut life = Life::blinker();
         {
             life.tick();
             let mut tick: Vec<_> = life.cells.iter().copied().collect();
@@ -163,6 +175,7 @@ mod test_life {
 #[derive(Default)]
 pub struct Model {
     count: Count,
+    life: Life,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -189,6 +202,7 @@ pub struct Capabilites {
 pub struct ViewModel {
     count: String,
     confirmed: bool,
+    life: HashSet<CellCoord>,
 }
 impl crux_core::App for App {
     type Model = Model;
@@ -234,6 +248,7 @@ impl crux_core::App for App {
         ViewModel {
             count: format!("{} {}", model.count.value, suffix),
             confirmed: model.count.updated_at.is_some(),
+            life: model.life.cells.clone(),
         }
     }
 }
