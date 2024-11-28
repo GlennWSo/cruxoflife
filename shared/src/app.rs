@@ -36,6 +36,7 @@ pub struct Life {
 impl Default for Life {
     fn default() -> Self {
         let mut life = Self::glider();
+        life.flip_rows();
         life.translate(&[5, 5]);
         life
     }
@@ -66,6 +67,12 @@ impl Life {
                 .drain()
                 .map(|cell| [cell[0] + delta[0], cell[1] + delta[1]]),
         );
+        self.cells.extend(self.buffer.drain(..));
+    }
+    fn flip_rows(&mut self) {
+        self.buffer.clear();
+        self.buffer
+            .extend(self.cells.drain().map(|cell| [-cell[0], cell[1]]));
         self.cells.extend(self.buffer.drain(..));
     }
     fn empty() -> Self {
@@ -355,10 +362,10 @@ mod tests {
           count: "0 Confirmed: 1970-01-01 00:00:00 UTC",
           confirmed: true,
           life: [
-            (4, 7),
             (5, 7),
+            (6, 6),
             (6, 7),
-            (4, 6),
+            (4, 7),
             (5, 5),
           ],
         )
