@@ -16,11 +16,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -56,8 +62,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun View(core: Core = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
-    Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green)){
+    var checked by remember { mutableStateOf(false) }
+        // Call your suspend function here
 
+    Canvas(modifier = Modifier.fillMaxSize().background(color=Color.Green)){
+        if (checked) {
+            coroutineScope.launch { core.update(Event.Step()) }
+        }
         val canvasQuadrantSize = size / 2F
         val h = size.height
         val w = size.width
@@ -66,22 +77,21 @@ fun View(core: Core = viewModel()) {
         val nCols = (w / cellSize ).roundToInt()
         val nRows = (h / cellSize ).roundToInt()
 
-        repeat(nCols + 1)  { col ->
-            repeat(nRows + 1)  { row ->
-            val derp = core.view?.life?.contains(listOf(row, col)) ?: true
-            if (derp) {
-                drawRect(
-                    color = Color.Black,
-                    size = Size(cellSize, cellSize),
-                    topLeft = Offset(
-                        y = cellSize * row,
-                        x = cellSize * col,
-                    )
+        val cells = core.view?.life ?: listOf()
+        cells.forEach{ cell ->
+            val row = cell[0]
+            val col = cell[1]
+            drawRect(
+                color = Color.Black,
+                size = Size(cellSize, cellSize),
+                topLeft = Offset(
+                    y = cellSize * row,
+                    x = cellSize * col,
                 )
-            }
+            )
         }
-
-
+// draw cell borders
+        repeat(nCols + 1)  { col ->
             drawLine(
                 strokeWidth = 3f,
                 color = Color.Black,
@@ -111,40 +121,42 @@ fun View(core: Core = viewModel()) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize(),
     ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().background(color = Color.White)) {
-            Text(text = "Crux Game of Life", fontSize = 30.sp, modifier = Modifier.padding(10.dp).background(color = Color.White))
 
-        }
 
         // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
         Spacer(
             modifier = Modifier.weight(1f)
         )
         Row( modifier = Modifier.fillMaxWidth().background(color=Color.White),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
             ) {
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+
+            ){
+                Checkbox( checked=checked, onCheckedChange = {checked = it})
+                Text(text = "Play", color = Color.Black)
+            }
+
+
+
+
+
             Button(
-                modifier = Modifier.padding(10.dp).padding(bottom = 30.dp),
-                onClick = {
-                    coroutineScope.launch { core.update(Event.Decrement()) }
-                }, colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.hsl(44F, 1F, 0.77F)
-                )
-            ) { Text(text = "Decrement", color = Color.DarkGray) }
-            Button(
-                modifier = Modifier.padding(10.dp),
+                modifier = Modifier.padding(15.dp),
                 onClick = {
                     coroutineScope.launch { core.update(Event.Increment()) }
                     coroutineScope.launch { core.update(Event.Step()) }
                 }, colors = ButtonDefaults.buttonColors(
                     containerColor = Color.hsl(348F, 0.86F, 0.61F)
                 )
-            ) { Text(text = "Increment", color = Color.White) }
+            ) { Text(text = "Step", color = Color.White) }
         }
     }
+
 }
 
 @Preview(showBackground = true)

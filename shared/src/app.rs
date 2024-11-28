@@ -205,6 +205,7 @@ mod test_life {
 pub struct Model {
     count: Count,
     life: Life,
+    run: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -213,6 +214,7 @@ pub enum Event {
     Decrement,
     Get,
     Step,
+    ToggleSimulation(bool),
 
     /// this event is private to the core
     #[serde(skip)]
@@ -242,10 +244,14 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::ToggleSimulation(val) => model.run = val,
             Event::Get => {
                 caps.http.get(API_URL).expect_json().send(Event::Set);
             }
-            Event::Step => model.life.tick(),
+            Event::Step => {
+                model.life.tick();
+                caps.render.render();
+            }
             Event::Increment => {
                 model.count.value += 1;
                 model.count.updated_at = None;
