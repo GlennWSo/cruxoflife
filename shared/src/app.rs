@@ -115,6 +115,21 @@ mod test_life {
         life.add_cells(&[[0, -1], [0, 0], [0, 1]]);
         life
     }
+    fn tub() -> Life {
+        let mut life = Life::default();
+        life.add_cells(&[[0, -1], [0, 1], [-1, 0], [1, 0]]);
+        life
+    }
+    #[test]
+    /// make sure static life is static
+    fn test_tub() {
+        let mut life = tub();
+        let expected = life.clone();
+        for _ in 0..17 {
+            life.tick();
+            assert_eq!(life, expected);
+        }
+    }
     #[test]
     fn test_blinker_tick() {
         let mut life = blinker();
