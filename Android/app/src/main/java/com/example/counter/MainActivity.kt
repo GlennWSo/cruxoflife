@@ -138,6 +138,7 @@ fun View(core: Core = viewModel()) {
                 modifier = Modifier.padding(10.dp),
                 onClick = {
                     coroutineScope.launch { core.update(Event.Increment()) }
+                    coroutineScope.launch { core.update(Event.Step()) }
                 }, colors = ButtonDefaults.buttonColors(
                     containerColor = Color.hsl(348F, 0.86F, 0.61F)
                 )

@@ -29,20 +29,31 @@ type CellCoord = [i32; 2];
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Life {
     cells: HashSet<CellCoord>,
-    spawns: Vec<CellCoord>,
+    buffer: Vec<CellCoord>,
 }
 
 impl Default for Life {
     fn default() -> Self {
-        Self::blinker()
+        let mut life = Self::blinker();
+        life.translate(&[5, 5]);
+        life
     }
 }
 
 impl Life {
+    fn translate(&mut self, delta: &CellCoord) {
+        self.buffer.clear();
+        self.buffer.extend(
+            self.cells
+                .drain()
+                .map(|cell| [cell[0] + delta[0], cell[1] + delta[1]]),
+        );
+        self.cells.extend(self.buffer.drain(..));
+    }
     fn empty() -> Self {
         Self {
             cells: HashSet::new(),
-            spawns: Vec::new(),
+            buffer: Vec::new(),
         }
     }
     fn blinker() -> Self {
@@ -91,7 +102,7 @@ impl Life {
     }
     fn save_spawns(&mut self) {
         // self.spawns.clear();
-        self.spawns = self
+        self.buffer = self
             .cells
             .iter()
             .flat_map(|cell| Self::adjecents(cell))
@@ -100,7 +111,7 @@ impl Life {
             .collect();
     }
     fn insert_saved(&mut self) {
-        for cell in self.spawns.drain(..) {
+        for cell in self.buffer.drain(..) {
             self.cells.insert(cell);
         }
     }
@@ -142,14 +153,32 @@ mod test_life {
             assert_eq!(life, expected);
         }
     }
+
+    #[test]
+    fn test_translate() {
+        let mut life = Life::tub();
+        life.translate(&[5, 5]);
+        life.translate(&[5, 5]);
+        let mut tick: Vec<_> = life.cells.iter().copied().collect();
+        tick.sort();
+        insta::assert_ron_snapshot!(tick, @r#"
+        [
+          (9, 10),
+          (10, 9),
+          (10, 11),
+          (11, 10),
+        ]
+        "#);
+    }
+
     #[test]
     fn test_blinker_tick() {
         let mut life = Life::blinker();
         {
             life.tick();
-            let mut tick: Vec<_> = life.cells.iter().copied().collect();
-            tick.sort();
-            insta::assert_ron_snapshot!(tick, @r#"
+            let mut cells: Vec<_> = life.cells.iter().copied().collect();
+            cells.sort();
+            insta::assert_ron_snapshot!(cells, @r#"
             [
               (-1, 0),
               (0, 0),
@@ -183,6 +212,7 @@ pub enum Event {
     Increment,
     Decrement,
     Get,
+    Step,
 
     /// this event is private to the core
     #[serde(skip)]
@@ -215,6 +245,7 @@ impl crux_core::App for App {
             Event::Get => {
                 caps.http.get(API_URL).expect_json().send(Event::Set);
             }
+            Event::Step => model.life.tick(),
             Event::Increment => {
                 model.count.value += 1;
                 model.count.updated_at = None;
@@ -301,6 +332,11 @@ mod tests {
         ViewModel(
           count: "0 Confirmed: 1970-01-01 00:00:00 UTC",
           confirmed: true,
+          life: [
+            (5, 5),
+            (5, 4),
+            (5, 6),
+          ],
         )
         "#);
     }
