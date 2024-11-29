@@ -9,10 +9,10 @@ a nice FFI for native shell development.
 This is crossplatfrom project with planned targets
 
 - [x] Android
-- [] Web
-- [] windows
-- [] linux
-- [] macOS
-- [] iOS
+- [ ] Web
+- [ ] windows
+- [ ] linux
+- [ ] macOS
+- [ ] iOS
 
  
