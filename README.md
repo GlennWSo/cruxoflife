@@ -1,12 +1,18 @@
-# Hello World example
+# Crux of Life
 
-Simple "hello world" example, with tests.
+Game of life implemented with crux.
 
-> Note: this is only a shared lib (and does not include any native shells).
+Crux lets developers write the core behavior off cross platform applications in rust while generating 
+a nice FFI for native shell development.
 
-## Hello World
 
-There is a single `None` event (enums with no variants cannot be instantiated).
+This is crossplatfrom project with planned targets
 
-There is a test to check that the `Render` capability asks the UI to re-render,
-and that the view returns the "Hello World!" string.
+- [x] Android
+- [] Web
+- [] windows
+- [] linux
+- [] macOS
+- [] iOS
+
+ 
