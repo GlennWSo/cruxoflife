@@ -115,6 +115,8 @@
       RUSTC = "${toolchain}/bin/rustc";
       RUST_CARGO = "${toolchain}/bin/cargo";
       buildInputs = with pkgs; [
+        typos
+
         mkAVD
         findPort
         startAVD

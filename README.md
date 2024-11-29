@@ -2,7 +2,7 @@
 
 Game of life implemented with crux.
 
-Crux lets developers write the core behavior off cross platform applications in rust while generating 
+Crux lets developers write the core behavior for cross platform applications in rust while generating 
 a nice FFI for native shell development.
 
 
