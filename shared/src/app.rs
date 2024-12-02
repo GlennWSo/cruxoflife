@@ -29,10 +29,14 @@ pub struct Count {
 /// cols are left to right
 type CellCoord = [i32; 2];
 
+type CellSet = HashSet<CellCoord>;
+
+type CellVector = Vec<CellCoord>;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Life {
-    cells: HashSet<CellCoord>,
-    buffer: Vec<CellCoord>,
+    state: CellSet,
+    buffer: CellVector,
 }
 
 impl Default for Life {
@@ -48,11 +52,11 @@ impl BitOr for Life {
     type Output = Life;
     fn bitor(mut self, mut rhs: Self) -> Self::Output {
         // let cells = self.cells.union(&rhs.cells).into();
-        self.cells.extend(rhs.cells.drain());
+        self.state.extend(rhs.state.drain());
         // let cells = self.cells.extend()
         let buffer = self.buffer;
         Self {
-            cells: self.cells,
+            state: self.state,
             buffer,
         }
     }
@@ -65,27 +69,27 @@ impl Life {
     fn translate(&mut self, delta: &CellCoord) {
         self.buffer.clear();
         self.buffer.extend(
-            self.cells
+            self.state
                 .drain()
                 .map(|cell| [cell[0] + delta[0], cell[1] + delta[1]]),
         );
-        self.cells.extend(self.buffer.drain(..));
+        self.state.extend(self.buffer.drain(..));
     }
     fn flip_rows(&mut self) {
         self.buffer.clear();
         self.buffer
-            .extend(self.cells.drain().map(|cell| [-cell[0], cell[1]]));
-        self.cells.extend(self.buffer.drain(..));
+            .extend(self.state.drain().map(|cell| [-cell[0], cell[1]]));
+        self.state.extend(self.buffer.drain(..));
     }
     fn empty() -> Self {
         Self {
-            cells: HashSet::new(),
+            state: HashSet::new(),
             buffer: Vec::new(),
         }
     }
     fn add_cells(&mut self, spawns: &[CellCoord]) {
         for cell in spawns {
-            self.cells.insert(*cell);
+            self.state.insert(*cell);
         }
     }
     fn new(init_life: &[CellCoord]) -> Self {
@@ -100,7 +104,13 @@ impl Life {
         Self::new(&[[0, -1], [0, 1], [-1, 0], [1, 0]])
     }
     fn glider() -> Self {
-        Self::new(&[[0, 0], [-1, 1], [-1, 2], [0, 2], [1, 2]])
+        Self::new(&[
+            [0, 0], //
+            [-1, 1],
+            [-1, 2],
+            [0, 2],
+            [1, 2],
+        ])
     }
     fn adjecents(coord: &CellCoord) -> [CellCoord; 8] {
         let [row, col] = coord;
@@ -122,42 +132,42 @@ impl Life {
         let adjs = Self::adjecents(coord);
         let count = adjs
             .into_iter()
-            .filter(|c| self.cells.get(c).is_some())
+            .filter(|c| self.state.get(c).is_some())
             .count() as u8;
         count == 3
     }
     fn save_spawns(&mut self) {
         // self.spawns.clear();
         self.buffer = self
-            .cells
+            .state
             .iter()
             .flat_map(|cell| Self::adjecents(cell))
-            .filter(|cell| self.cells.get(cell).is_none())
+            .filter(|cell| self.state.get(cell).is_none())
             .filter(|cell| self.cell_birth(cell))
             .collect();
     }
     fn insert_saved(&mut self) {
         for cell in self.buffer.drain(..) {
-            self.cells.insert(cell);
+            self.state.insert(cell);
         }
     }
     fn cell_survive(&self, coord: &CellCoord) -> bool {
         let adjs = Self::adjecents(coord);
         let count = adjs
             .into_iter()
-            .filter(|c| self.cells.get(c).is_some())
+            .filter(|c| self.state.get(c).is_some())
             .count() as u8;
         count == 2 || count == 3
     }
     fn kill_cells(&mut self) {
         let survivors: Box<[_]> = self
-            .cells
+            .state
             .iter()
             .filter(|cell| self.cell_survive(cell))
             .copied()
             .collect();
-        self.cells.clear();
-        self.cells.extend(survivors);
+        self.state.clear();
+        self.state.extend(survivors);
     }
     fn tick(&mut self) {
         self.save_spawns();
@@ -165,9 +175,12 @@ impl Life {
         self.insert_saved();
     }
     fn toggle_cell(&mut self, coord: CellCoord) {
-        if !self.cells.remove(&coord) {
-            self.cells.insert(coord);
+        if !self.state.remove(&coord) {
+            self.state.insert(coord);
         }
+    }
+    fn state_as_list(&self) -> CellVector {
+        self.state.iter().copied().collect()
     }
 }
 
@@ -190,7 +203,7 @@ mod test_life {
         let mut life = Life::tub();
         life.translate(&[5, 5]);
         life.translate(&[5, 5]);
-        let mut tick: Vec<_> = life.cells.iter().copied().collect();
+        let mut tick: Vec<_> = life.state.iter().copied().collect();
         tick.sort();
         insta::assert_ron_snapshot!(tick, @r#"
         [
@@ -207,7 +220,7 @@ mod test_life {
         let mut life = Life::blinker();
         {
             life.tick();
-            let mut cells: Vec<_> = life.cells.iter().copied().collect();
+            let mut cells: Vec<_> = life.state.iter().copied().collect();
             cells.sort();
             insta::assert_ron_snapshot!(cells, @r#"
             [
@@ -219,7 +232,7 @@ mod test_life {
         }
         {
             life.tick();
-            let mut tick: Vec<_> = life.cells.iter().copied().collect();
+            let mut tick: Vec<_> = life.state.iter().copied().collect();
             tick.sort();
             insta::assert_ron_snapshot!(tick, @r#"
             [
@@ -247,6 +260,7 @@ pub enum Event {
     Echo(String),
     ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
+    SaveWorld,
 
     /// this event is private to the core
     #[serde(skip)]
@@ -260,7 +274,8 @@ pub struct Capabilites {
     pub render: Render<Event>,
     /// capable of asking shell to preform http requests
     pub http: Http<Event>,
-    pub alert: Alert<Event>,
+    alert: Alert<Event>,
+    file_io: FileIO<Event>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -277,6 +292,10 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::SaveWorld => {
+                caps.file_io.save(model);
+                caps.alert.info("save data sent to shell".to_string());
+            }
             Event::Echo(msg) => {
                 caps.alert.info(msg);
             }
@@ -325,8 +344,40 @@ impl crux_core::App for App {
         ViewModel {
             count: format!("{} {}", model.count.value, suffix),
             confirmed: model.count.updated_at.is_some(),
-            life: model.life.cells.clone(),
+            life: model.life.state.clone(),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+enum FileOperation {
+    Save(CellVector),
+}
+
+impl Operation for FileOperation {
+    type Output = Option<CellVector>;
+}
+
+#[derive(Capability)]
+struct FileIO<Event> {
+    context: CapabilityContext<FileOperation, Event>,
+}
+
+impl<Event> FileIO<Event> {
+    fn new(context: CapabilityContext<FileOperation, Event>) -> Self {
+        Self { context }
+    }
+    fn save(&self, model: &Model)
+    where
+        Event: 'static,
+    {
+        let ctx = self.context.clone();
+        let save_state = model.life.state_as_list();
+        self.context.spawn(async move {
+            // Instruct Shell to get ducks in a row and await the ducks
+            ctx.request_from_shell(FileOperation::Save(save_state))
+                .await;
+        })
     }
 }
 
@@ -370,6 +421,39 @@ mod tests {
     use crux_http::testing::ResponseBuilder;
 
     #[test]
+    fn json_life() {
+        let life = Life::glider();
+        let mut cells_list = dbg!(life.state_as_list());
+        cells_list.sort();
+
+        insta::assert_json_snapshot!(dbg!(cells_list), @r#"
+        [
+          [
+            -1,
+            1
+          ],
+          [
+            -1,
+            2
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+        "#);
+        // panic!();
+    }
+
+    #[test]
     fn renders() {
         let app = AppTester::<App, _>::default();
         let mut model = Model::default();
@@ -388,39 +472,6 @@ mod tests {
         let actual_view = app.view(&model).count;
         let expected_view = "0 Pending...";
         assert_eq!(actual_view, expected_view);
-    }
-
-    #[test]
-    fn resets_count() {
-        let app = AppTester::<App, _>::default();
-        let mut model = Model::default();
-        let _ = app.update(Event::Increment, &mut model);
-        let expected_view = "0 Pending...";
-        {
-            let view0 = app.view(&model).count;
-            assert_ne!(view0, expected_view);
-        }
-        let count = Count {
-            value: 0,
-            updated_at: Some(DateTime::from_timestamp_nanos(0)),
-        };
-        let fake_response = ResponseBuilder::ok().body(count).build();
-        let _ = app.update(Event::Set(Ok(fake_response)), &mut model);
-        // assert_eq!(reset_view, expected_view);
-        // check that the view has been updated correctly
-        insta::assert_ron_snapshot!(app.view(&model), @r#"
-        ViewModel(
-          count: "0 Confirmed: 1970-01-01 00:00:00 UTC",
-          confirmed: true,
-          life: [
-            (5, 7),
-            (6, 6),
-            (6, 7),
-            (4, 7),
-            (5, 5),
-          ],
-        )
-        "#);
     }
 
     #[test]

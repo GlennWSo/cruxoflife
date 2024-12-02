@@ -2,6 +2,7 @@
 
 package com.example.counter
 
+import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,7 @@ import com.example.counter.shared_types.AlertOpereation
 import com.example.counter.shared_types.AlertOpereation.Info
 import com.example.counter.shared_types.Effect
 import com.example.counter.shared_types.Event
+import com.example.counter.shared_types.FileOperation
 import com.example.counter.shared_types.HttpResult
 import com.example.counter.shared_types.Request
 import com.example.counter.shared_types.Requests
@@ -21,6 +23,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.endpoint
 import kotlinx.coroutines.launch
+import java.io.File
 
 class Core : androidx.lifecycle.ViewModel() {
     var view: ViewModel? by mutableStateOf(null)
@@ -28,6 +31,8 @@ class Core : androidx.lifecycle.ViewModel() {
 
     var alert: String? by mutableStateOf(null)
         private set
+
+    var saveBuffer: List<List<Int>> by mutableStateOf(listOf())
 
     private val httpClient = HttpClient(CIO)
     private val sseClient = HttpClient(CIO) {
@@ -65,14 +70,23 @@ class Core : androidx.lifecycle.ViewModel() {
                 when (val alert = effect.value){
                     is AlertOpereation.Info -> {
                         this.alert = alert.value
-
                     }
                     else -> {
                         this.alert = "unknown Alert kind"
-
                     }
                 }
-
+            }
+            is Effect.FileIO -> {
+                when (val ioOp = effect.value) {
+                    is FileOperation.Save  -> {
+                        this.saveBuffer = ioOp.value
+//                        val path = Environment.getExternalStorageDirectory()
+//                        val letDirectory = File(path, "LET")
+//                        letDirectory.mkdirs()
+//                        val file = File(letDirectory, "Records.txt")
+//                        file.appendText("record goes here")
+                    }
+                }
             }
 
             is Effect.Http -> {
