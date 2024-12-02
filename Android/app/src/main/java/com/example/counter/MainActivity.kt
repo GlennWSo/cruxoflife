@@ -142,30 +142,33 @@ fun View(core: Core = viewModel()) {
                 )
             )
         }
-// draw cell borders
-        val screenCell = cellSize*zoom
-        val nCols = (w / screenCell ).roundToInt()
-        val nRows = (h / screenCell ).roundToInt()
-        repeat(nCols + 1)  { col ->
-            val x: Float = screenCell*col + (cameraOffset.x * zoom)  % screenCell + (w/2f) % screenCell
-            drawLine(
-                strokeWidth = 3f,
-                color = Color.Black,
-                start = Offset(x, y = 0f),
-                end = Offset(x = x, y = h),
-                colorFilter = ColorFilter.tint(Color.Black)
-            )
+        // draw cell borders
+        if (zoom > 0.4){
+            val screenCell = cellSize*zoom
+            val nCols = (w / screenCell ).roundToInt()
+            val nRows = (h / screenCell ).roundToInt()
+            repeat(nCols + 1)  { col ->
+                val x: Float = screenCell*col + (cameraOffset.x * zoom)  % screenCell + (w/2f) % screenCell
+                drawLine(
+                    strokeWidth = 3f,
+                    color = Color.Black,
+                    start = Offset(x, y = 0f),
+                    end = Offset(x = x, y = h),
+                    colorFilter = ColorFilter.tint(Color.Black)
+                )
+            }
+            repeat(nRows + 1) { row ->
+                val y: Float = screenCell*row + (cameraOffset.y * zoom)  % screenCell + (h/2f) % screenCell
+                drawLine(
+                    strokeWidth = 3f,
+                    color = Color.Black,
+                    start = Offset(y = y, x = 0f),
+                    end = Offset(y = y, x = w),
+                    colorFilter = ColorFilter.tint(Color.Black)
+                )
+            }
         }
-        repeat(nRows + 1) { row ->
-            val y: Float = screenCell*row + (cameraOffset.y * zoom)  % screenCell + (h/2f) % screenCell
-            drawLine(
-                strokeWidth = 3f,
-                color = Color.Black,
-                start = Offset(y = y, x = 0f),
-                end = Offset(y = y, x = w),
-                colorFilter = ColorFilter.tint(Color.Black)
-            )
-        }
+
 
         // Draw a rectangle
         // drawRect(color = Color.Magenta, size = canvasQuadrantSize)
