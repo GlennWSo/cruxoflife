@@ -119,12 +119,6 @@ class MainActivity : ComponentActivity() {
                             it.write("[${cell[0]}, ${cell[1]}],\n".toByteArray())
                         }
                         it.write("]\n".toByteArray())
-
-//                        it.write(
-//                            ("Overwritten at ${System.currentTimeMillis()}\n")
-//                                .toByteArray()
-//                        )
-
                     }
                 }
 
@@ -148,16 +142,7 @@ fun Offset.rotateBy(angle: Float): Offset {
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun View(activity: Activity, core: Core = viewModel()) {
-
-    val notificationPermission = rememberPermissionState(
-        permission = Manifest.permission.MANAGE_EXTERNAL_STORAGE
-    )
-
-    var context = LocalContext.current
-
-
-
+fun View(activity: Activity?, core: Core = viewModel()) {
 
     val coroutineScope = rememberCoroutineScope()
     var checked by remember { mutableStateOf(false) }
@@ -254,12 +239,7 @@ fun View(activity: Activity, core: Core = viewModel()) {
                 )
             }
         }
-
-
-        // Draw a rectangle
-        // drawRect(color = Color.Magenta, size = canvasQuadrantSize)
-        // Draw a circle
-        // drawCircle(color = Color.Cyan, radius = 400f)
+        
     }
 
     Column(
@@ -274,8 +254,29 @@ fun View(activity: Activity, core: Core = viewModel()) {
             )
             .background(Color.Black))
 
-        Text( text = core.alert ?: "")
+        Row( modifier = Modifier
+            .fillMaxWidth()
+            .background(color = Color.White),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                modifier = Modifier.padding(15.dp),
+                onClick = {
+                    coroutineScope.launch {
+                        // Request code for creating a PDF document.
+                        core.update(Event.SaveWorld())
+                        createFile(activity!!, Uri.EMPTY)
+                    }
+                    checked = false
+                }, colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.hsl(348F, 0.86F, 0.61F)
+                )
+            ) { Text(text = "save", color = Color.White) }
+            Spacer(modifier = Modifier.weight(1f))
 
+
+        }
         // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
         Spacer(
             modifier = Modifier.weight(1f)
@@ -304,9 +305,6 @@ fun View(activity: Activity, core: Core = viewModel()) {
                     coroutineScope.launch {
                         core.update(Event.Step())
                         // Request code for creating a PDF document.
-                        core.update(Event.SaveWorld())
-                        createFile(activity, Uri.EMPTY)
-
                     }
                     checked = false
                 }, colors = ButtonDefaults.buttonColors(
