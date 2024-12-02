@@ -12,9 +12,14 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -171,15 +176,19 @@ fun View(core: Core = viewModel()) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.imePadding()
     ) {
+        Spacer(modifier = Modifier.fillMaxWidth().windowInsetsTopHeight(
+            WindowInsets.systemBars).background(Color.Black))
 
 
         // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
         Spacer(
             modifier = Modifier.weight(1f)
         )
-        Row( modifier = Modifier.fillMaxWidth().background(color=Color.White),
+        val whiteTint = Color.hsl(1f,1f,1f,0.8f)
+
+        Row( modifier = Modifier.fillMaxWidth().background(color=whiteTint),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
             ) {
@@ -203,6 +212,8 @@ fun View(core: Core = viewModel()) {
                 )
             ) { Text(text = "Step", color = Color.White) }
         }
+        Spacer(modifier = Modifier.fillMaxWidth().windowInsetsBottomHeight(
+            WindowInsets.systemBars))
     }
 
 }
