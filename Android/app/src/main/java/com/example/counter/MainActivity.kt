@@ -184,6 +184,7 @@ fun View(core: Core = viewModel()) {
         Spacer(modifier = Modifier.fillMaxWidth().windowInsetsTopHeight(
             WindowInsets.systemBars).background(Color.Black))
 
+        Text( text = core.alert ?: "")
 
         // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
         Spacer(
@@ -208,7 +209,10 @@ fun View(core: Core = viewModel()) {
             Button(
                 modifier = Modifier.padding(15.dp),
                 onClick = {
-                    coroutineScope.launch { core.update(Event.Step()) }
+                    coroutineScope.launch {
+                        core.update(Event.Step())
+                        core.update(Event.Echo("derp"))
+                    }
                     checked = false
                 }, colors = ButtonDefaults.buttonColors(
                     containerColor = Color.hsl(348F, 0.86F, 0.61F)

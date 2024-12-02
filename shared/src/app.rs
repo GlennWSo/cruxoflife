@@ -4,6 +4,8 @@ use std::ops::BitOr;
 
 use chrono::serde::ts_milliseconds_option::deserialize as ts_milliseconds_option;
 use chrono::{DateTime, Utc};
+use crux_core::capability::{CapabilityContext, Operation};
+use crux_core::macros::Capability;
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
@@ -242,6 +244,7 @@ pub enum Event {
     Decrement,
     Get,
     Step,
+    Echo(String),
     ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
 
@@ -257,6 +260,7 @@ pub struct Capabilites {
     pub render: Render<Event>,
     /// capable of asking shell to preform http requests
     pub http: Http<Event>,
+    pub alert: Alert<Event>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -273,6 +277,9 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::Echo(msg) => {
+                caps.alert.info(msg);
+            }
             Event::ToggleCell(coord) => {
                 model.life.toggle_cell(coord);
                 caps.render.render();
@@ -322,6 +329,40 @@ impl crux_core::App for App {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+enum AlertOpereation {
+    Info(String),
+    Warning(String),
+    Error(String),
+}
+
+impl Operation for AlertOpereation {
+    type Output = ();
+}
+
+#[derive(Capability)]
+struct Alert<Event> {
+    context: CapabilityContext<AlertOpereation, Event>,
+}
+
+impl<Event> Alert<Event> {
+    pub fn new(context: CapabilityContext<AlertOpereation, Event>) -> Self {
+        Self { context }
+    }
+    pub fn info(&self, msg: String)
+    where
+        Event: 'static,
+    {
+        let ctx = self.context.clone();
+        // Start a shell interaction
+        self.context.spawn(async move {
+            // Instruct Shell to get ducks in a row and await the ducks
+            ctx.request_from_shell(AlertOpereation::Info(msg)).await;
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

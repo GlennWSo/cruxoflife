@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.counter.shared.handleResponse
 import com.example.counter.shared.processEvent
 import com.example.counter.shared.view
+import com.example.counter.shared_types.AlertOpereation
+import com.example.counter.shared_types.AlertOpereation.Info
 import com.example.counter.shared_types.Effect
 import com.example.counter.shared_types.Event
 import com.example.counter.shared_types.HttpResult
@@ -22,6 +24,9 @@ import kotlinx.coroutines.launch
 
 class Core : androidx.lifecycle.ViewModel() {
     var view: ViewModel? by mutableStateOf(null)
+        private set
+
+    var alert: String? by mutableStateOf(null)
         private set
 
     private val httpClient = HttpClient(CIO)
@@ -55,6 +60,19 @@ class Core : androidx.lifecycle.ViewModel() {
         when (val effect = request.effect) {
             is Effect.Render -> {
                 this.view = ViewModel.bincodeDeserialize(view())
+            }
+            is Effect.Alert -> {
+                when (val alert = effect.value){
+                    is AlertOpereation.Info -> {
+                        this.alert = alert.value
+
+                    }
+                    else -> {
+                        this.alert = "unknown Alert kind"
+
+                    }
+                }
+
             }
 
             is Effect.Http -> {
