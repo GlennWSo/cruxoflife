@@ -15,4 +15,6 @@ This is crossplatfrom project with planned targets
 - [ ] macOS
 - [ ] iOS
 
- 
+## Android
+
+![alt text](https://github.com/GlennWSo/cruxoflife/blob/main/screenshot.png?raw=true)
