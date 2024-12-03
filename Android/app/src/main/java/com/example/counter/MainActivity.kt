@@ -16,9 +16,11 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,12 +68,21 @@ private fun createFile(activity: Activity, pickerInitialUri: Uri) {
         addCategory(Intent.CATEGORY_OPENABLE)
         type = "application/json"
         putExtra(Intent.EXTRA_TITLE, "life.json")
-
-        // Optionally, specify a URI for the directory that should be opened in
-        // the system file picker before your app creates the document.
         putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
     }
     startActivityForResult(activity, intent, CREATE_FILE, null)
+}
+
+// Request code for selecting a PDF document.
+const val READ_FILE = 2
+
+private fun readFile(activity: Activity, pickerInitialUri: Uri) {
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        addCategory(Intent.CATEGORY_OPENABLE)
+        type = "application/json"
+        putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
+    }
+    startActivityForResult(activity, intent, READ_FILE, null)
 }
 
 
@@ -98,32 +109,32 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("MissingSuperCall")
     override fun onActivityResult(
         requestCode: Int, resultCode: Int, resultData: Intent?) {
-        if (requestCode == 1
-            && resultCode == Activity.RESULT_OK) {
-            // The result data contains a URI for the document or directory that
-            // the user selected.
-            resultData?.data?.also { uri ->
-                // Perform operations on the document using its URI.
-                this.applicationContext.contentResolver.openFileDescriptor(uri, "w")?.use {
-                    FileOutputStream(it.fileDescriptor).use {
-                        it.write(this.core.saveBuffer.toByteArray())
-//                        it.write("[\n".toByteArray())
-//                        for (cell in this.core.saveBuffer) {
-//                            it.write("[${cell[0]}, ${cell[1]}],\n".toByteArray())
-//                        }
-//                        it.write("]\n".toByteArray())
+            if (requestCode == CREATE_FILE
+                && resultCode == Activity.RESULT_OK) {
+                // The result data contains a URI for the document or directory that
+                // the user selected.
+                resultData?.data?.also { uri ->
+                    // Perform operations on the document using its URI.
+                    this.applicationContext.contentResolver.openFileDescriptor(uri, "w")?.use {
+                        FileOutputStream(it.fileDescriptor).use {
+                            it.write(this.core.saveBuffer.toByteArray())
+                        }
                     }
-                }
-
+                    }
+            }
+            if (requestCode == READ_FILE
+                && resultCode == Activity.RESULT_OK) {
+                resultData?.data?.also { uri ->
+                    // Perform operations on the document using its URI.
+                    this.applicationContext.contentResolver.openInputStream(uri).use { inputStream ->
+                        if (inputStream != null) {
+                            this.core.saveBuffer = inputStream.readAllBytes().toList()
+                        }
+                    }
                 }
             }
         }
     }
-
-
-
-
-
 
 
 fun Offset.rotateBy(angle: Float): Offset {
@@ -259,12 +270,20 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                // Request code for creating a PDF document.
                                 core.update(Event.SaveWorld())
                                 createFile(activity!!, Uri.EMPTY)
                             }
                         }
-                    ) { Text(text = "save", color = Color.White) }
+                    ) { Text(text = "save") }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                readFile(activity!!, Uri.EMPTY)
+                                core.update(Event.LoadWorld(core.saveBuffer))
+                            }
+                        }
+                    ) { Text(text = "load") }
                 }
             )
         },

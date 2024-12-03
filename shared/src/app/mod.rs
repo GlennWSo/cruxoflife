@@ -311,6 +311,7 @@ impl crux_core::App for App {
                 let coords: CellVector = serde_json::from_slice(data.as_slice()).unwrap();
                 model.life.clear();
                 model.life.add_cells(&coords);
+                caps.render.render();
             }
             Event::SaveWorld => {
                 caps.file_io.save(model);
