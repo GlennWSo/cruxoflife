@@ -106,11 +106,12 @@ class MainActivity : ComponentActivity() {
                 // Perform operations on the document using its URI.
                 this.applicationContext.contentResolver.openFileDescriptor(uri, "w")?.use {
                     FileOutputStream(it.fileDescriptor).use {
-                        it.write("[\n".toByteArray())
-                        for (cell in this.core.saveBuffer) {
-                            it.write("[${cell[0]}, ${cell[1]}],\n".toByteArray())
-                        }
-                        it.write("]\n".toByteArray())
+                        it.write(this.core.saveBuffer.toByteArray())
+//                        it.write("[\n".toByteArray())
+//                        for (cell in this.core.saveBuffer) {
+//                            it.write("[${cell[0]}, ${cell[1]}],\n".toByteArray())
+//                        }
+//                        it.write("]\n".toByteArray())
                     }
                 }
 

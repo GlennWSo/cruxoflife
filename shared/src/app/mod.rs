@@ -7,8 +7,8 @@ use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
-mod caps;
-use caps::{Alert, FileIO};
+mod capabilities;
+use capabilities::{Alert, FileIO};
 
 #[derive(Default)]
 pub struct App;

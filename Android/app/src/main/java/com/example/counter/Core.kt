@@ -32,7 +32,7 @@ class Core : androidx.lifecycle.ViewModel() {
     var alert: String? by mutableStateOf(null)
         private set
 
-    var saveBuffer: List<List<Int>> by mutableStateOf(listOf())
+    var saveBuffer: List<Byte> by mutableStateOf(listOf())
 
     private val httpClient = HttpClient(CIO)
     private val sseClient = HttpClient(CIO) {

@@ -3,12 +3,15 @@ use crux_core::macros::Capability;
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
+use serde_json::to_vec;
 
 use super::{CellVector, Model};
 
+type Data = Vec<u8>;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum FileOperation {
-    Save(CellVector),
+    Save(Data),
 }
 
 impl Operation for FileOperation {
@@ -29,11 +32,11 @@ impl<Event> FileIO<Event> {
         Event: 'static,
     {
         let ctx = self.context.clone();
-        let save_state = model.life.state_as_list();
+        let data = model.life.state_as_list();
+        let data = to_vec(&data).unwrap();
         self.context.spawn(async move {
-            // Instruct Shell to get ducks in a row and await the ducks
-            ctx.request_from_shell(FileOperation::Save(save_state))
-                .await;
+            // Instruct Shell to save some bytes of data
+            ctx.request_from_shell(FileOperation::Save(data)).await;
         })
     }
 }
