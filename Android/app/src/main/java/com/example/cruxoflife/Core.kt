@@ -1,29 +1,24 @@
 @file:Suppress("NAME_SHADOWING")
 
-package com.example.counter
+package com.example.cruxoflife
 
-import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
-import com.example.counter.shared.handleResponse
-import com.example.counter.shared.processEvent
-import com.example.counter.shared.view
-import com.example.counter.shared_types.AlertOpereation
-import com.example.counter.shared_types.AlertOpereation.Info
-import com.example.counter.shared_types.Effect
-import com.example.counter.shared_types.Event
-import com.example.counter.shared_types.FileOperation
-import com.example.counter.shared_types.HttpResult
-import com.example.counter.shared_types.Request
-import com.example.counter.shared_types.Requests
-import com.example.counter.shared_types.ViewModel
+import com.example.cruxoflife.shared.processEvent
+import com.example.cruxoflife.shared.view
+import com.example.cruxoflife.shared_types.AlertOpereation
+import com.example.cruxoflife.shared_types.Effect
+import com.example.cruxoflife.shared_types.Event
+import com.example.cruxoflife.shared_types.FileOperation
+import com.example.cruxoflife.shared_types.Request
+import com.example.cruxoflife.shared_types.Requests
+import com.example.cruxoflife.shared_types.ViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.endpoint
 import kotlinx.coroutines.launch
-import java.io.File
 
 class Core : androidx.lifecycle.ViewModel() {
     var view: ViewModel? by mutableStateOf(null)

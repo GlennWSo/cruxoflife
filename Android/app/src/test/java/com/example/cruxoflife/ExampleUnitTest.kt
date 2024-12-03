@@ -1,4 +1,4 @@
-package com.example.counter.shared
+package com.example.cruxoflife
 
 import org.junit.Test
 
