@@ -7,6 +7,9 @@ use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
+mod caps;
+use caps::{Alert, FileIO};
+
 #[derive(Default)]
 pub struct App;
 
@@ -326,70 +329,5 @@ impl crux_core::App for App {
         ViewModel {
             life: model.life.state.clone(),
         }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-enum FileOperation {
-    Save(CellVector),
-}
-
-impl Operation for FileOperation {
-    type Output = Option<CellVector>;
-}
-
-#[derive(Capability)]
-struct FileIO<Event> {
-    context: CapabilityContext<FileOperation, Event>,
-}
-
-impl<Event> FileIO<Event> {
-    fn new(context: CapabilityContext<FileOperation, Event>) -> Self {
-        Self { context }
-    }
-    fn save(&self, model: &Model)
-    where
-        Event: 'static,
-    {
-        let ctx = self.context.clone();
-        let save_state = model.life.state_as_list();
-        self.context.spawn(async move {
-            // Instruct Shell to get ducks in a row and await the ducks
-            ctx.request_from_shell(FileOperation::Save(save_state))
-                .await;
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-enum AlertOpereation {
-    Info(String),
-    Warning(String),
-    Error(String),
-}
-
-impl Operation for AlertOpereation {
-    type Output = ();
-}
-
-#[derive(Capability)]
-struct Alert<Event> {
-    context: CapabilityContext<AlertOpereation, Event>,
-}
-
-impl<Event> Alert<Event> {
-    pub fn new(context: CapabilityContext<AlertOpereation, Event>) -> Self {
-        Self { context }
-    }
-    pub fn info(&self, msg: String)
-    where
-        Event: 'static,
-    {
-        let ctx = self.context.clone();
-        // Start a shell interaction
-        self.context.spawn(async move {
-            // Instruct Shell to get ducks in a row and await the ducks
-            ctx.request_from_shell(AlertOpereation::Info(msg)).await;
-        })
     }
 }

@@ -1,4 +1,5 @@
 pub mod app; // not exposed so you can remove this in your project
+             // pub mod fileio;
 
 use lazy_static::lazy_static;
 use wasm_bindgen::prelude::wasm_bindgen;
