@@ -1,14 +1,11 @@
 package com.example.counter
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
-import android.provider.DocumentsContract.Document
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,21 +16,21 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +44,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.startActivityForResult
@@ -55,11 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.counter.shared_types.Event
 import com.example.counter.ui.theme.CounterTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 import kotlinx.coroutines.launch
-import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.PI
 import kotlin.math.cos
@@ -140,23 +132,18 @@ fun Offset.rotateBy(angle: Float): Offset {
     return Offset((x * cos - y * sin).toFloat(), (x * sin + y * cos).toFloat())
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
+
 @Composable
-fun View(activity: Activity?, core: Core = viewModel()) {
-
-    val coroutineScope = rememberCoroutineScope()
-    var checked by remember { mutableStateOf(false) }
-
+fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
     var cameraOffset by remember { mutableStateOf(Offset.Zero) }
-    // var offsetY by remember { mutableStateOf(0f) }
     var zoom by remember { mutableStateOf(1f) }
     val cellSize = 30f
     val cellOffset = Offset(cellSize, cellSize)
-    var csize by remember { mutableStateOf(Size(100f, 100f)) }
-    val h = csize.height
-    val w = csize.width
-    val quadrent = Offset(w/2f, h/2f)
-
+    var cSize by remember { mutableStateOf(Size(100f, 100f)) }
+    val h = cSize.height
+    val w = cSize.width
+    val quadrant = Offset(w/2f, h/2f)
+    val coroutineScope = rememberCoroutineScope()
 
     Canvas(modifier = Modifier
         .fillMaxSize()
@@ -165,7 +152,7 @@ fun View(activity: Activity?, core: Core = viewModel()) {
             detectTapGestures(onTap = { location ->
                 // val worldPos = Offset(col*cellSize, row*cellSize)
                 // val location = (worldPos + cameraOffset )*zoom + Offset(w/2f, h/2f)
-                val worldPos = (location - quadrent) / zoom - cameraOffset - cellOffset / 2f
+                val worldPos = (location - quadrant) / zoom - cameraOffset - cellOffset / 2f
                 val index = (worldPos / cellSize)
                 val col = index.x.roundToInt()
                 val row = index.y.roundToInt()
@@ -179,7 +166,7 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                 val oldScale = zoom
                 val newScale = zoom * gestureZoom
                 val factor = (newScale / oldScale)
-                val center = cameraOffset + Offset(csize.width, csize.height) * zoom / 2f
+                val center = cameraOffset + Offset(cSize.width, cSize.height) * zoom / 2f
 
                 cameraOffset += pan / oldScale
                 //offset = offset + centroid / oldScale-  centroid / newScale + pan / oldScale
@@ -187,26 +174,25 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                 // offset += centroid / oldScale - centroid / newScale
                 zoom = newScale
             })
-        } ){
-        if (checked) {
+        } ) {
+        if (running) {
             coroutineScope.launch { core.update(Event.Step()) }
         }
         val canvasQuadrantSize = size / 2F
-        csize = size
-
+        cSize = size
 
 
         val cells = core.view?.life ?: listOf()
-        cells.forEach{ cell ->
+        cells.forEach { cell ->
             val row = cell[0]
             val col = cell[1]
-            val worldPos = Offset(col*cellSize, row*cellSize)
+            val worldPos = Offset(col * cellSize, row * cellSize)
 
-            val screenPos = (worldPos + cameraOffset )*zoom + Offset(w/2f, h/2f)
+            val screenPos = (worldPos + cameraOffset) * zoom + Offset(w / 2f, h / 2f)
 
             drawRect(
                 color = Color.Black,
-                size = Size(cellSize, cellSize)*zoom,
+                size = Size(cellSize, cellSize) * zoom,
                 topLeft = Offset(
                     y = screenPos.y,
                     x = screenPos.x,
@@ -214,12 +200,13 @@ fun View(activity: Activity?, core: Core = viewModel()) {
             )
         }
         // draw cell borders
-        if (zoom > 0.4){
-            val screenCell = cellSize*zoom
-            val nCols = (w / screenCell ).roundToInt()
-            val nRows = (h / screenCell ).roundToInt()
-            repeat(nCols + 1)  { col ->
-                val x: Float = screenCell*col + (cameraOffset.x * zoom)  % screenCell + (w/2f) % screenCell
+        if (zoom > 0.4) {
+            val screenCell = cellSize * zoom
+            val nCols = (w / screenCell).roundToInt()
+            val nRows = (h / screenCell).roundToInt()
+            repeat(nCols + 1) { col ->
+                val x: Float =
+                    screenCell * col + (cameraOffset.x * zoom) % screenCell + (w / 2f) % screenCell
                 drawLine(
                     strokeWidth = 3f,
                     color = Color.Black,
@@ -229,7 +216,8 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                 )
             }
             repeat(nRows + 1) { row ->
-                val y: Float = screenCell*row + (cameraOffset.y * zoom)  % screenCell + (h/2f) % screenCell
+                val y: Float =
+                    screenCell * row + (cameraOffset.y * zoom) % screenCell + (h / 2f) % screenCell
                 drawLine(
                     strokeWidth = 3f,
                     color = Color.Black,
@@ -239,86 +227,88 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                 )
             }
         }
-        
     }
+}
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.imePadding()
-    ) {
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsTopHeight(
-                WindowInsets.systemBars
+
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun View(activity: Activity?, core: Core = viewModel()) {
+    val coroutineScope = rememberCoroutineScope()
+
+    var running by remember { mutableStateOf(false) }
+    var runText  = "Run"
+    if (running){
+        runText = "Running"
+    }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                colors = topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                ),
+                title = {
+                    Text("Crux of Life")
+                },
+                actions = {
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                // Request code for creating a PDF document.
+                                core.update(Event.SaveWorld())
+                                createFile(activity!!, Uri.EMPTY)
+                            }
+                        }
+                    ) { Text(text = "save", color = Color.White) }
+                }
             )
-            .background(Color.Black))
-
-        Row( modifier = Modifier
-            .fillMaxWidth()
-            .background(color = Color.White),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                modifier = Modifier.padding(15.dp),
-                onClick = {
-                    coroutineScope.launch {
-                        // Request code for creating a PDF document.
-                        core.update(Event.SaveWorld())
-                        createFile(activity!!, Uri.EMPTY)
-                    }
-                    checked = false
-                }, colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.hsl(348F, 0.86F, 0.61F)
-                )
-            ) { Text(text = "save", color = Color.White) }
-            Spacer(modifier = Modifier.weight(1f))
-
-
-        }
-        // Text(text = "Rust Core, Kotlin Shell (Jetpack Compose)", modifier = Modifier.padding(10.dp))
-        Spacer(
-            modifier = Modifier.weight(1f)
-        )
-        val whiteTint = Color.hsl(1f,1f,1f,0.8f)
-
-        Row( modifier = Modifier
-            .fillMaxWidth()
-            .background(color = whiteTint),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        },
+        bottomBar = { BottomAppBar(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.primary,
+            ){
+            Row( modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                Button(onClick = {
+                    running = !running
+                }){
+                    Text(runText)
+                }
 
-            ){
-                Checkbox( checked=checked, onCheckedChange = {checked = it})
-                Text(text = "Play", color = Color.Black)
+                Button(
+                    modifier = Modifier.padding(15.dp),
+                    onClick = {
+                        coroutineScope.launch {
+                            core.update(Event.Step())
+                            // Request code for creating a PDF document.
+                        }
+                        running = false
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.hsl(348F, 0.86F, 0.61F)
+                    )
+                ) { Text(text = "Step", color = Color.White) }
             }
 
-            Button(
-                modifier = Modifier.padding(15.dp),
-                onClick = {
-                    coroutineScope.launch {
-                        core.update(Event.Step())
-                        // Request code for creating a PDF document.
-                    }
-                    checked = false
-                }, colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.hsl(348F, 0.86F, 0.61F)
-                )
-            ) { Text(text = "Step", color = Color.White) }
-        }
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsBottomHeight(
-                WindowInsets.systemBars
-            ))
-    }
+        } }
 
+
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding).fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ){
+            LifeGrid(activity, core, running)
+        }
+
+    }
 }
 
 @Preview(showBackground = true)
