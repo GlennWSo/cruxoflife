@@ -53,7 +53,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.counter.shared_types.Event
 import com.example.counter.ui.theme.CounterTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.FileOutputStream
 import kotlin.math.PI
 import kotlin.math.cos
@@ -106,6 +108,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    suspend fun loadWorld() {
+
+    }
+
     @SuppressLint("MissingSuperCall")
     override fun onActivityResult(
         requestCode: Int, resultCode: Int, resultData: Intent?) {
@@ -117,7 +123,7 @@ class MainActivity : ComponentActivity() {
                     // Perform operations on the document using its URI.
                     this.applicationContext.contentResolver.openFileDescriptor(uri, "w")?.use {
                         FileOutputStream(it.fileDescriptor).use {
-                            it.write(this.core.saveBuffer.toByteArray())
+                            it.write(core.saveBuffer.toByteArray())
                         }
                     }
                     }
@@ -128,12 +134,18 @@ class MainActivity : ComponentActivity() {
                     // Perform operations on the document using its URI.
                     this.applicationContext.contentResolver.openInputStream(uri).use { inputStream ->
                         if (inputStream != null) {
-                            this.core.saveBuffer = inputStream.readAllBytes().toList()
+                            val core = this.core
+                            core.saveBuffer = inputStream.readAllBytes().toList()
+                            runBlocking { launch{
+                                core.update(Event.LoadWorld(core.saveBuffer))
+                            } }
+
                         }
                     }
                 }
             }
         }
+
     }
 
 
@@ -280,7 +292,6 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                         onClick = {
                             coroutineScope.launch {
                                 readFile(activity!!, Uri.EMPTY)
-                                core.update(Event.LoadWorld(core.saveBuffer))
                             }
                         }
                     ) { Text(text = "load") }
