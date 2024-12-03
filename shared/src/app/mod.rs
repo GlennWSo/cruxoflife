@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 use std::ops::BitOr;
 
-use crux_core::capability::{CapabilityContext, Operation};
-use crux_core::macros::Capability;
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
@@ -89,6 +87,10 @@ impl Life {
             state: HashSet::new(),
             buffer: Vec::new(),
         }
+    }
+    fn clear(&mut self) {
+        self.state.clear();
+        self.buffer.clear();
     }
     fn add_cells(&mut self, spawns: &[CellCoord]) {
         for cell in spawns {
@@ -279,7 +281,7 @@ pub enum Event {
     ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
     SaveWorld,
-    LoadWorld(Box<[u8]>),
+    LoadWorld(Vec<u8>),
 }
 
 #[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
@@ -305,6 +307,11 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::LoadWorld(data) => {
+                let coords: CellVector = serde_json::from_slice(data.as_slice()).unwrap();
+                model.life.clear();
+                model.life.add_cells(&coords);
+            }
             Event::SaveWorld => {
                 caps.file_io.save(model);
                 caps.alert.info("save data sent to shell".to_string());
@@ -321,7 +328,6 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::SpawnGlider(_coord) => todo!(),
-            Event::LoadWorld(_data) => todo!(),
         }
     }
 

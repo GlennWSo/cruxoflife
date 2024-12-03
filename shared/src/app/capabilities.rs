@@ -1,7 +1,5 @@
 use crux_core::capability::{CapabilityContext, Operation};
 use crux_core::macros::Capability;
-use crux_core::{macros::Effect, render::Render};
-use crux_http::Http;
 use serde::{Deserialize, Serialize};
 use serde_json::to_vec;
 
