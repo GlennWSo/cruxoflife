@@ -1,32 +1,15 @@
-use std::borrow::BorrowMut;
 use std::collections::HashSet;
 use std::ops::BitOr;
 
-use chrono::serde::ts_milliseconds_option::deserialize as ts_milliseconds_option;
-use chrono::{DateTime, Utc};
 use crux_core::capability::{CapabilityContext, Operation};
 use crux_core::macros::Capability;
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
-const API_URL: &str = "https://crux-counter.fly.dev";
-const INC_API: &str = "https://crux-counter.fly.dev/inc";
-const DEC_API: &str = "https://crux-counter.fly.dev/dec";
-
 #[derive(Default)]
 pub struct App;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, Eq)]
-pub struct Count {
-    value: i32,
-    #[serde(deserialize_with = "ts_milliseconds_option")]
-    updated_at: Option<DateTime<Utc>>,
-}
-
-/// [row, col]
-/// rows are top to bottom
-/// cols are left to right
 type CellCoord = [i32; 2];
 
 type CellSet = HashSet<CellCoord>;
@@ -62,10 +45,27 @@ impl BitOr for Life {
     }
 }
 
+/// Life forms
+#[allow(dead_code)]
 impl Life {
-    // fn merge(&self, other: Life) {
-    //     let derp = self.or(other);
-    // }
+    fn blinker() -> Self {
+        Self::new(&[[0, -1], [0, 0], [0, 1]])
+    }
+    fn tub() -> Self {
+        Self::new(&[[0, -1], [0, 1], [-1, 0], [1, 0]])
+    }
+    fn glider() -> Self {
+        Self::new(&[
+            [0, 0], //
+            [-1, 1],
+            [-1, 2],
+            [0, 2],
+            [1, 2],
+        ])
+    }
+}
+
+impl Life {
     fn translate(&mut self, delta: &CellCoord) {
         self.buffer.clear();
         self.buffer.extend(
@@ -96,21 +96,6 @@ impl Life {
         let mut game = Self::empty();
         game.add_cells(init_life);
         game
-    }
-    fn blinker() -> Self {
-        Self::new(&[[0, -1], [0, 0], [0, 1]])
-    }
-    fn tub() -> Self {
-        Self::new(&[[0, -1], [0, 1], [-1, 0], [1, 0]])
-    }
-    fn glider() -> Self {
-        Self::new(&[
-            [0, 0], //
-            [-1, 1],
-            [-1, 2],
-            [0, 2],
-            [1, 2],
-        ])
     }
     fn adjecents(coord: &CellCoord) -> [CellCoord; 8] {
         let [row, col] = coord;
@@ -187,6 +172,40 @@ impl Life {
 #[cfg(test)]
 mod test_life {
     use super::*;
+
+    #[test]
+    fn json_life() {
+        let life = Life::glider();
+        let mut cells_list = dbg!(life.state_as_list());
+        cells_list.sort();
+
+        insta::assert_json_snapshot!(dbg!(cells_list), @r#"
+        [
+          [
+            -1,
+            1
+          ],
+          [
+            -1,
+            2
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+        "#);
+        // panic!();
+    }
+
     #[test]
     /// make sure static life is static
     fn test_tub() {
@@ -247,24 +266,17 @@ mod test_life {
 
 #[derive(Default)]
 pub struct Model {
-    count: Count,
     life: Life,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
-    Increment,
-    Decrement,
-    Get,
     Step,
     Echo(String),
     ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
     SaveWorld,
-
-    /// this event is private to the core
-    #[serde(skip)]
-    Set(crux_http::Result<crux_http::Response<Count>>),
+    LoadWorld(Box<[u8]>),
 }
 
 #[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
@@ -280,8 +292,6 @@ pub struct Capabilites {
 
 #[derive(Serialize, Deserialize)]
 pub struct ViewModel {
-    count: String,
-    confirmed: bool,
     life: HashSet<CellCoord>,
 }
 impl crux_core::App for App {
@@ -303,47 +313,17 @@ impl crux_core::App for App {
                 model.life.toggle_cell(coord);
                 caps.render.render();
             }
-            Event::Get => {
-                caps.http.get(API_URL).expect_json().send(Event::Set);
-            }
             Event::Step => {
                 model.life.tick();
                 caps.render.render();
             }
-            Event::Increment => {
-                model.count.value += 1;
-                model.count.updated_at = None;
-                caps.render.render();
-
-                caps.http.post(INC_API).expect_json().send(Event::Set);
-            }
-            Event::Decrement => {
-                model.count.value -= 1;
-                model.count.updated_at = None;
-                caps.render.render();
-
-                caps.http.post(DEC_API).expect_json().send(Event::Set);
-            }
-            Event::Set(Ok(mut response)) => {
-                model.count = response.take_body().unwrap();
-                caps.render.render()
-            }
-            Event::SpawnGlider(coord) => todo!(),
-            Event::Set(Err(e)) => {
-                panic!("Oh no: {}", e);
-            }
+            Event::SpawnGlider(_coord) => todo!(),
+            Event::LoadWorld(_data) => todo!(),
         }
     }
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
-        let suffix = match model.count.updated_at {
-            Some(date) => format!("Confirmed: {date}"),
-            None => "Pending...".to_string(),
-        };
-
         ViewModel {
-            count: format!("{} {}", model.count.value, suffix),
-            confirmed: model.count.updated_at.is_some(),
             life: model.life.state.clone(),
         }
     }
@@ -411,81 +391,5 @@ impl<Event> Alert<Event> {
             // Instruct Shell to get ducks in a row and await the ducks
             ctx.request_from_shell(AlertOpereation::Info(msg)).await;
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crux_core::{assert_effect, testing::AppTester};
-    use crux_http::testing::ResponseBuilder;
-
-    #[test]
-    fn json_life() {
-        let life = Life::glider();
-        let mut cells_list = dbg!(life.state_as_list());
-        cells_list.sort();
-
-        insta::assert_json_snapshot!(dbg!(cells_list), @r#"
-        [
-          [
-            -1,
-            1
-          ],
-          [
-            -1,
-            2
-          ],
-          [
-            0,
-            0
-          ],
-          [
-            0,
-            2
-          ],
-          [
-            1,
-            2
-          ]
-        ]
-        "#);
-        // panic!();
-    }
-
-    #[test]
-    fn renders() {
-        let app = AppTester::<App, _>::default();
-        let mut model = Model::default();
-
-        let update = app.update(Event::Increment, &mut model);
-
-        // Check update asked us to `Render`
-        assert_effect!(update, Effect::Render(_));
-    }
-
-    #[test]
-    fn shows_initial_count() {
-        let app = AppTester::<App, _>::default();
-        let model = Model::default();
-
-        let actual_view = app.view(&model).count;
-        let expected_view = "0 Pending...";
-        assert_eq!(actual_view, expected_view);
-    }
-
-    #[test]
-    fn counts_up_and_down() {
-        let app = AppTester::<App, _>::default();
-        let mut model = Model::default();
-
-        let _ = app.update(Event::Increment, &mut model);
-        let _ = app.update(Event::Decrement, &mut model);
-        let _ = app.update(Event::Increment, &mut model);
-        let _ = app.update(Event::Increment, &mut model);
-
-        let actual_view = app.view(&model).count;
-        let expected_view = "2 Pending...";
-        assert_eq!(actual_view, expected_view);
     }
 }

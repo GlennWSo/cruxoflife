@@ -48,7 +48,6 @@ class Core : androidx.lifecycle.ViewModel() {
 
     init {
         viewModelScope.launch {
-            update(Event.Get())
         }
     }
 
@@ -80,30 +79,9 @@ class Core : androidx.lifecycle.ViewModel() {
                 when (val ioOp = effect.value) {
                     is FileOperation.Save  -> {
                         this.saveBuffer = ioOp.value
-//                        val path = Environment.getExternalStorageDirectory()
-//                        val letDirectory = File(path, "LET")
-//                        letDirectory.mkdirs()
-//                        val file = File(letDirectory, "Records.txt")
-//                        file.appendText("record goes here")
                     }
                 }
             }
-
-            is Effect.Http -> {
-                val response = requestHttp(httpClient, effect.value)
-
-                val effects =
-                    handleResponse(
-                        request.id.toUInt(),
-                        HttpResult.Ok(response).bincodeSerialize()
-                    )
-
-                val requests = Requests.bincodeDeserialize(effects)
-                for (request in requests) {
-                    processEffect(request)
-                }
-            }
-
 
         }
     }
