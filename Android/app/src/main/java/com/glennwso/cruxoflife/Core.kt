@@ -1,20 +1,20 @@
 @file:Suppress("NAME_SHADOWING")
 
-package com.example.cruxoflife
+package com.glennwso.cruxoflife
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
-import com.example.cruxoflife.shared.processEvent
-import com.example.cruxoflife.shared.view
-import com.example.cruxoflife.shared_types.AlertOpereation
-import com.example.cruxoflife.shared_types.Effect
-import com.example.cruxoflife.shared_types.Event
-import com.example.cruxoflife.shared_types.FileOperation
-import com.example.cruxoflife.shared_types.Request
-import com.example.cruxoflife.shared_types.Requests
-import com.example.cruxoflife.shared_types.ViewModel
+import com.glennwso.cruxoflife.shared.processEvent
+import com.glennwso.cruxoflife.shared.view
+import com.glennwso.cruxoflife.shared_types.AlertOpereation
+import com.glennwso.cruxoflife.shared_types.Effect
+import com.glennwso.cruxoflife.shared_types.Event
+import com.glennwso.cruxoflife.shared_types.FileOperation
+import com.glennwso.cruxoflife.shared_types.Request
+import com.glennwso.cruxoflife.shared_types.Requests
+import com.glennwso.cruxoflife.shared_types.ViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.endpoint

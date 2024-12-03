@@ -1,4 +1,4 @@
-package com.example.cruxoflife.ui.theme
+package com.glennwso.cruxoflife.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

@@ -1,4 +1,4 @@
-package com.example.cruxoflife
+package com.glennwso.cruxoflife
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -50,8 +50,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.cruxoflife.shared_types.Event
-import com.example.cruxoflife.ui.theme.CounterTheme
+import com.glennwso.cruxoflife.shared_types.Event
+import com.glennwso.cruxoflife.ui.theme.CounterTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

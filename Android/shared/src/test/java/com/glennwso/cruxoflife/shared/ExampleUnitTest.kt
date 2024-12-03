@@ -1,4 +1,4 @@
-package com.example.cruxoflife
+package com.glennwso.cruxoflife.shared
 
 import org.junit.Test
 

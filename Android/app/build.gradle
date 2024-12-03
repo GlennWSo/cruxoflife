@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.cruxoflife'
+    namespace 'com.glennwso.cruxoflife'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.cruxoflife"
+        applicationId "com.glennwso.cruxoflife"
         minSdk 33
         targetSdk 34
         versionCode 1

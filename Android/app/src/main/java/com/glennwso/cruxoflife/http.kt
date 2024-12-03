@@ -1,8 +1,8 @@
-package com.example.cruxoflife
+package com.glennwso.cruxoflife
 
-import com.example.cruxoflife.shared_types.HttpHeader
-import com.example.cruxoflife.shared_types.HttpRequest
-import com.example.cruxoflife.shared_types.HttpResponse
+import com.glennwso.cruxoflife.shared_types.HttpHeader
+import com.glennwso.cruxoflife.shared_types.HttpRequest
+import com.glennwso.cruxoflife.shared_types.HttpResponse
 import com.novi.serde.Bytes
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
