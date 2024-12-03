@@ -48,6 +48,7 @@ class Core : androidx.lifecycle.ViewModel() {
 
     init {
         viewModelScope.launch {
+            update(Event.Step())
         }
     }
 
