@@ -281,6 +281,7 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                 actions = {
                     Button(
                         onClick = {
+                            running = false
                             coroutineScope.launch {
                                 core.update(Event.SaveWorld())
                                 createFile(activity!!, Uri.EMPTY)
@@ -290,6 +291,7 @@ fun View(activity: Activity?, core: Core = viewModel()) {
                     Spacer(modifier = Modifier.width(10.dp))
                     Button(
                         onClick = {
+                            running = false
                             coroutineScope.launch {
                                 readFile(activity!!, Uri.EMPTY)
                             }
