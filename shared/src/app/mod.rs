@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::ops::BitOr;
+use std::{collections::HashSet, fmt::Display};
 
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
@@ -290,15 +290,26 @@ pub struct Capabilites {
     /// capable of telling shell that viewmodel has been updated for the next rendering
     pub render: Render<Event>,
     /// capable of asking shell to preform http requests
-    pub http: Http<Event>,
     alert: Alert<Event>,
     file_io: FileIO<Event>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
-    life: HashSet<CellCoord>,
+    pub life: Vec<CellCoord>,
 }
+impl Display for ViewModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.life.is_empty() {
+            return write!(f, "Empty");
+        }
+        let r = self.life.iter().max_by(|a, b| a[0].cmp(&b[0])).unwrap()[0];
+
+        let c = self.life.iter().max_by(|a, b| a[1].cmp(&b[1])).unwrap()[1];
+        write!(f, "r: {r} c: {c}")
+    }
+}
+
 impl crux_core::App for App {
     type Model = Model;
     type Capabilities = Capabilites;
@@ -334,7 +345,7 @@ impl crux_core::App for App {
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
-            life: model.life.state.clone(),
+            life: model.life.state.iter().copied().collect(),
         }
     }
 }
