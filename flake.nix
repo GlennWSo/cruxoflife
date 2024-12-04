@@ -102,6 +102,9 @@
         delay 2
         ${startApk}/bin/startapk $port
     '';
+    sign = pkgs.writeShellScriptBin "sign" ''
+      jarsigner -verbose -sigalg SHA256withRSA -keystore .secrets/androidkeystore.jks -signedjar cruxlife_signed.aab app/build/outputs/bundle/release/app-release.aab key0
+    '';
     # android = pkgs.androidenv.androidPkgs;
   in {
     packages.x86_64-linux.default = pkgs.hello;
@@ -116,6 +119,7 @@
       RUST_CARGO = "${toolchain}/bin/cargo";
       buildInputs = with pkgs; [
         typos
+        pandoc
 
         mkAVD
         findPort
@@ -123,6 +127,7 @@
         installApk
         startApk
         oneUp
+        sign
 
         toolchain
         rust-analyzer
