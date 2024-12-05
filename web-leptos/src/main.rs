@@ -1,5 +1,6 @@
 mod core;
 
+use leptos::attr::height;
 use leptos::prelude::*;
 use std::f64::consts::PI;
 use std::ops::Deref;
@@ -33,18 +34,13 @@ fn root_component() -> impl IntoView {
     let UseWindowSizeReturn { width, height } = use_window_size();
     create_effect(move |_| {
         if let Some(canvas) = canvas_ref.get() {
-            // let width = canvas.offset_width() as u32;
-            // let height = canvas.offset_height() as u32;
-
             let width = width.get();
             let height = height.get();
-            // let h = height as f64;
             let cell_size = 50.0;
             let zoom = 1.0;
-
             let ncol = (width / cell_size) as u32;
+            let nrow = (height / cell_size) as u32;
 
-            debug!("{:#?}", ncol);
             canvas.set_width(width as u32);
             canvas.set_height(height as u32);
 
@@ -65,9 +61,21 @@ fn root_component() -> impl IntoView {
                 ctx.move_to(x, 0.0);
                 ctx.line_to(x, height);
             }
+            let mut y = 0.0;
+            for _ in 0..nrow {
+                y += cell_size;
+                ctx.move_to(0.0, y);
+                ctx.line_to(width, y);
+            }
 
+            let view = view.get();
+            for [row, col] in view.life {
+                let x = row as f64 * cell_size;
+                let y = col as f64 * cell_size;
+                ctx.rect(x, y, cell_size, cell_size);
+            }
+            ctx.fill();
             ctx.stroke();
-            // ctx.fill();
         }
     });
 
