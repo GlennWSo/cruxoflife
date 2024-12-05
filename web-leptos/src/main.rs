@@ -15,27 +15,26 @@ fn root_component() -> impl IntoView {
 
     view! {
         <>
+            <script type="module" src="hello.js"></script>
             <section class="section has-text-centered">
                 <p class="title">{"Crux Counter Example"}</p>
                 <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
-            </section>
-            <section class="container has-text-centered">
                 <p class="is-size-5">{move || view.get().to_string()}</p>
+            </section>
+            <section class="section has-text-centered">
+                <canvas id="myCanvas" width="200" class="section has-text-centered" height="100" style="border:1px solid #000000;">
+                </canvas>
+                <script>
+                </script>
+            </section>
+
+            <section class="container has-text-centered">
                 <div class="buttons section is-centered">
                     <button class="button is-primary is-warning"
                         on:click=move |_| set_event.update(|value| *value = Event::Step)
                     >
-                        {"Decrement"}
+                        {"Step"}
                     </button>
-                    <button class="button is-primary is-warning"
-                        on:click=move |_| ()   >
-                        {"Derp"}
-                    </button>
-                    // // <button class="button is-primary is-danger"
-                    // //     on:click=move |_| set_event.update(|value| *value = Event::Increment)
-                    // // >
-                    //     {"Increment"}
-                    // </button>
                 </div>
             </section>
         </>
