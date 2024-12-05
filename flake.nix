@@ -18,7 +18,7 @@
       config.allowUnfree = true;
       config.android_sdk.accept_license = true;
     };
-    toolchain = pkgs.rust-bin.stable.latest.default.override {
+    toolchain = pkgs.rust-bin.nightly.latest.default.override {
       extensions = ["rust-src"];
       targets = ["aarch64-linux-android" "armv7-linux-androideabi" "i686-linux-android" "x86_64-linux-android" "wasm32-unknown-unknown"];
     };

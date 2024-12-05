@@ -276,6 +276,7 @@ pub struct Model {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Event {
+    Render,
     Step,
     Echo(String),
     ToggleCell(CellCoord),
@@ -318,6 +319,9 @@ impl crux_core::App for App {
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
+            Event::Render => {
+                caps.render.render();
+            }
             Event::LoadWorld(data) => {
                 let coords: CellVector = serde_json::from_slice(data.as_slice()).unwrap();
                 model.life.clear();
