@@ -1,9 +1,16 @@
 use core::f64;
-use log::info;
+use log::{debug, info};
 use wasm_bindgen::prelude::*;
 use web_sys::console::warn;
 
-pub fn draw_canvas() {
+pub struct DrawScope {
+    pub width: f32,
+    pub height: f32,
+    pub cell_size: f32,
+    pub camera_pos: [f32; 2],
+}
+
+pub fn draw_canvas(_scope: DrawScope) {
     let document = web_sys::window().unwrap().document().unwrap();
     let Some(canvas) = document.get_element_by_id("canvas") else {
         info!("id canvas not found");
@@ -14,12 +21,14 @@ pub fn draw_canvas() {
         .map_err(|_| ())
         .unwrap();
 
+    info!("{:#?}", canvas);
     let context = canvas
         .get_context("2d")
         .unwrap()
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
+    info!("{:#?}", context);
 
     context.begin_path();
 

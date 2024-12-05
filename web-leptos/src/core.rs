@@ -3,6 +3,7 @@ use std::rc::Rc;
 use futures_util::TryStreamExt;
 // use leptos::{spawn_local, SignalUpdate, WriteSignal};
 use leptos::prelude::*;
+use log::info;
 use shared::{App, Effect, Event, ViewModel};
 use web_leptos::draw_canvas;
 
@@ -25,7 +26,7 @@ pub fn process_effect(core: &Core, effect: Effect, render: WriteSignal<ViewModel
 
     match effect {
         Effect::Render(_) => {
-            draw_canvas();
+            info!("perfomring render effect");
             render.update(|view| *view = core.view());
         }
         Effect::FileIO(_) => todo!(),
