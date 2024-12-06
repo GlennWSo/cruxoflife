@@ -4,6 +4,7 @@ use leptos::attr::height;
 use leptos::prelude::*;
 use std::f64::consts::PI;
 use std::ops::Deref;
+use web_sys::PointerEvent;
 
 use leptos::{attr::Height, mount::mount_to_body};
 use leptos_use::{use_window_size, UseWindowSizeReturn};
@@ -18,6 +19,8 @@ use wasm_bindgen::JsValue;
 use web_leptos::{draw_canvas, DrawScope};
 use web_sys::CanvasRenderingContext2d;
 
+type DragStart = Option<[i32; 2]>;
+
 #[component]
 fn root_component() -> impl IntoView {
     let core = core::new();
@@ -29,6 +32,21 @@ fn root_component() -> impl IntoView {
         core::update(&core, event.get(), render);
     });
 
+    let (drag_start, set_drag_start) = signal(DragStart::default());
+    let (drag_end, set_drag_end) = signal([0_i32, 0]);
+    let (camera_pos, set_camera_pos) = signal([0_i32, 0]);
+    let (camera_old, set_camera_old) = signal([0_i32, 0]);
+    create_effect(move |_| {
+        if let Some(start_pos) = drag_start.get() {
+            let end_pos = drag_end.get();
+            let drag = [end_pos[0] - start_pos[0], end_pos[1] - start_pos[1]];
+            let old_pos = camera_old.get();
+            let new_pos = [drag[0] + old_pos[0], drag[1] + old_pos[1]];
+            set_camera_pos.update(|pos| *pos = new_pos);
+            info!("draged:  to {:?}", new_pos);
+        }
+    });
+
     // draw the canvas
     let canvas_ref = create_node_ref::<html::Canvas>();
     let UseWindowSizeReturn { width, height } = use_window_size();
@@ -38,8 +56,8 @@ fn root_component() -> impl IntoView {
             let height = height.get();
             let cell_size = 50.0;
             let zoom = 1.0;
-            let ncol = (width / cell_size) as u32;
-            let nrow = (height / cell_size) as u32;
+            let ncol = (width / cell_size) as u32 + 2;
+            let nrow = (height / cell_size) as u32 + 2;
 
             canvas.set_width(width as u32);
             canvas.set_height(height as u32);
@@ -55,13 +73,18 @@ fn root_component() -> impl IntoView {
             ctx.begin_path();
             ctx.set_line_width(2.0);
 
-            let mut x = 0.0;
+            // draw grid
+
+            let camx = camera_pos.get()[0] as f64;
+            let camy = camera_pos.get()[1] as f64;
+
+            let mut x = camx % cell_size - cell_size;
+            let mut y = camy % cell_size - cell_size;
             for _ in 0..ncol {
                 x += cell_size;
                 ctx.move_to(x, 0.0);
                 ctx.line_to(x, height);
             }
-            let mut y = 0.0;
             for _ in 0..nrow {
                 y += cell_size;
                 ctx.move_to(0.0, y);
@@ -70,8 +93,8 @@ fn root_component() -> impl IntoView {
 
             let view = view.get();
             for [row, col] in view.life {
-                let x = row as f64 * cell_size;
-                let y = col as f64 * cell_size;
+                let x = camx + row as f64 * cell_size;
+                let y = camy + col as f64 * cell_size;
                 ctx.rect(x, y, cell_size, cell_size);
             }
             ctx.fill();
@@ -87,7 +110,19 @@ fn root_component() -> impl IntoView {
         <p class="is-size-5">{move || view.get().to_string()}</p>
         <p class="is-size-5">{width}" "{height}</p>
         <div class="container">
-            <canvas id="canvas" node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 80vh; border:2px solid #000000;">
+            <canvas id="canvas" on:pointerup=move |ev|{
+                set_drag_start.set(None);
+                set_camera_old.set(camera_pos.get());
+            }
+            on:pointerdown=move|ev|{
+                let camera_pos = camera_pos.get();
+                set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
+            }
+            on:pointermove=move |ev: PointerEvent|{
+                set_drag_end.set([ev.offset_x(), ev.offset_y()]);
+            }
+
+            node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 80vh; border:2px solid #000000;">
             </canvas>
             <div class="buttons section is-centered">
                 <button class="button is-primary is-warning"
