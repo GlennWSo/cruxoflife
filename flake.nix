@@ -141,6 +141,7 @@
         pnpm
         trunk
         nodejs
+        static-server
 
         (android-studio.withSdk android.androidsdk)
         ktlint

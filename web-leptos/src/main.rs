@@ -1,37 +1,30 @@
 mod core;
 
-use leptos::attr::height;
 use leptos::prelude::*;
-use std::f64::consts::PI;
-use std::ops::Deref;
+use shared::ViewModel;
 use web_sys::PointerEvent;
 
-use leptos::{attr::Height, mount::mount_to_body};
+use leptos::mount::mount_to_body;
 use leptos_use::{use_window_size, UseWindowSizeReturn};
 
 use leptos::html;
 
-use log::{debug, info};
 use shared::Event;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
-use web_leptos::{draw_canvas, DrawScope};
 use web_sys::CanvasRenderingContext2d;
+
+#[allow(unused)]
+use log::{debug, error, info, warn};
 
 type DragStart = Option<[i32; 2]>;
 
 #[component]
-fn root_component() -> impl IntoView {
-    let core = core::new();
+fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
+    let canvas_ref = NodeRef::<html::Canvas>::new();
 
-    // create event signals
-    let (view, render) = create_signal(core.view());
-    let (event, set_event) = create_signal(Event::Step);
-    create_effect(move |_| {
-        core::update(&core, event.get(), render);
-    });
-
+    let UseWindowSizeReturn { width, height } = use_window_size();
     let (drag_start, set_drag_start) = signal(DragStart::default());
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
     let (camera_pos, set_camera_pos) = signal([0_i32, 0]);
@@ -47,9 +40,6 @@ fn root_component() -> impl IntoView {
         }
     });
 
-    // draw the canvas
-    let canvas_ref = create_node_ref::<html::Canvas>();
-    let UseWindowSizeReturn { width, height } = use_window_size();
     create_effect(move |_| {
         if let Some(canvas) = canvas_ref.get() {
             let width = width.get();
@@ -102,41 +92,52 @@ fn root_component() -> impl IntoView {
         }
     });
 
-    let view = view! { <>
+    view! {
+        <canvas id="canvas" on:pointerup=move |_|{
+            set_drag_start.set(None);
+            set_camera_old.set(camera_pos.get());
+        }
+        on:pointerdown=move|ev|{
+            set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
+        }
+        on:pointermove=move |ev: PointerEvent|{
+            set_drag_end.set([ev.offset_x(), ev.offset_y()]);
+        }
+
+        node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 80vh; border:2px solid #000000;">
+        </canvas>
+    }
+}
+
+#[component]
+fn root_component() -> impl IntoView {
+    let core = core::new();
+
+    let (view, render) = signal(core.view());
+    let (event, set_event) = signal(Event::Step);
+    Effect::new(move |_| {
+        core::update(&core, event.get(), render);
+    });
+
+    view! { <>
     <main>
     <section class="section has-text-centered">
         <p class="title">{"Crux Counter Example"}</p>
         <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
         <p class="is-size-5">{move || view.get().to_string()}</p>
-        <p class="is-size-5">{width}" "{height}</p>
-        <div class="container">
-            <canvas id="canvas" on:pointerup=move |ev|{
-                set_drag_start.set(None);
-                set_camera_old.set(camera_pos.get());
-            }
-            on:pointerdown=move|ev|{
-                let camera_pos = camera_pos.get();
-                set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
-            }
-            on:pointermove=move |ev: PointerEvent|{
-                set_drag_end.set([ev.offset_x(), ev.offset_y()]);
-            }
-
-            node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 80vh; border:2px solid #000000;">
-            </canvas>
-            <div class="buttons section is-centered">
-                <button class="button is-primary is-warning"
-                    on:click=move |_| set_event.update(|value| *value = Event::Step)>
-                        {"Step"}
-                </button>
-            </div>
+        // <p class="is-size-5">{width}" "{height}</p>
+        <GameCanvas view=view/>
+        <div class="buttons section is-centered">
+            <button class="button is-primary is-warning"
+                on:click=move |_| set_event.update(|value| *value = Event::Step)>
+                    {"Step"}
+            </button>
         </div>
 
     </section>
     </main>
     </>
-    };
-    view
+    }
 }
 
 fn main() {
