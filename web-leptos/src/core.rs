@@ -1,11 +1,9 @@
 use std::rc::Rc;
 
-use futures_util::TryStreamExt;
 // use leptos::{spawn_local, SignalUpdate, WriteSignal};
 use leptos::prelude::*;
 use log::info;
 use shared::{App, Effect, Event, ViewModel};
-use web_leptos::draw_canvas;
 
 pub type Core = Rc<shared::Core<Effect, App>>;
 

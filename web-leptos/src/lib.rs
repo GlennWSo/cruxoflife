@@ -1,7 +1,6 @@
 use core::f64;
-use log::{debug, info};
+use log::info;
 use wasm_bindgen::prelude::*;
-use web_sys::console::warn;
 
 pub struct DrawScope {
     pub width: f32,

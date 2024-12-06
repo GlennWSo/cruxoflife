@@ -29,7 +29,7 @@ fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
     let (camera_pos, set_camera_pos) = signal([0_i32, 0]);
     let (camera_old, set_camera_old) = signal([0_i32, 0]);
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(start_pos) = drag_start.get() {
             let end_pos = drag_end.get();
             let drag = [end_pos[0] - start_pos[0], end_pos[1] - start_pos[1]];
@@ -40,12 +40,12 @@ fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
         }
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(canvas) = canvas_ref.get() {
             let width = width.get();
             let height = height.get();
             let cell_size = 50.0;
-            let zoom = 1.0;
+            // let zoom = 1.0;
             let ncol = (width / cell_size) as u32 + 2;
             let nrow = (height / cell_size) as u32 + 2;
 
@@ -59,7 +59,7 @@ fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
                 .dyn_into::<CanvasRenderingContext2d>()
                 .unwrap();
 
-            ctx.set_fill_style(&JsValue::from_str("red"));
+            ctx.set_fill_style_str("red");
             ctx.begin_path();
             ctx.set_line_width(2.0);
 
