@@ -4,6 +4,7 @@ use std::ops::Deref;
 
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
+use send_wrapper::SendWrapper;
 use shared::ViewModel;
 use web_sys::PointerEvent;
 
@@ -24,7 +25,7 @@ use log::{debug, error, info, warn};
 type DragStart = Option<[i32; 2]>;
 
 #[component]
-fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
+fn GameCanvas(#[prop(into)] view: Signal<Option<SendWrapper<shared::ViewModel>>>) -> impl IntoView {
     let canvas_ref = NodeRef::<html::Canvas>::new();
 
     let UseWindowSizeReturn { width, height } = use_window_size();
@@ -84,11 +85,12 @@ fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
                 ctx.line_to(width, y);
             }
 
-            let view = view.get();
-            for [row, col] in view.life {
-                let x = camx + row as f64 * cell_size;
-                let y = camy + col as f64 * cell_size;
-                ctx.rect(x, y, cell_size, cell_size);
+            if let Some(view) = view.get() {
+                for [row, col] in &view.life {
+                    let x = camx + *row as f64 * cell_size;
+                    let y = camy + *col as f64 * cell_size;
+                    ctx.rect(x, y, cell_size, cell_size);
+                }
             }
             ctx.fill();
             ctx.stroke();
@@ -121,11 +123,30 @@ async fn add_num(val: i32, rhs: i32) -> i32 {
 fn root_component() -> impl IntoView {
     let core = core::new();
 
-    let (view, render) = signal(core.view());
     let (event, set_event) = signal(Event::Step);
-    Effect::new(move |_| {
-        core::update(&core, event.get(), render);
+    let view = LocalResource::new(move || {
+        let core = core.clone();
+        async move {
+            core.process_event(event.get());
+            send_wrapper::SendWrapper::new(TimeoutFuture::new(1)).await;
+            core.view()
+        }
     });
+
+    let (running, set_run) = signal(false);
+    let view = move || match view.get() {
+        Some(v) => {
+            if running.get() {
+                set_event.set(Event::Step);
+            }
+            Some(v)
+        }
+        None => None,
+    };
+
+    // Effect::new(move |_| {
+    //     core::update(&core, event.get(), render);
+    // });
     let (count, set_count) = signal(0_i32);
 
     let async_data = LocalResource::new(move || add_num(count.get(), 1));
@@ -149,10 +170,14 @@ fn root_component() -> impl IntoView {
         <p> {async_result}</p>
         <p class="title">{"Crux Counter Example"}</p>
         <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
-        <p class="is-size-5">{move || view.get().to_string()}</p>
+        // <p class="is-size-5">{move || view.get().to_string()}</p>
         // <p class="is-size-5">{width}" "{height}</p>
-        <GameCanvas view=view/>
+        <GameCanvas view=Signal::derive(view)/>
         <div class="buttons section is-centered">
+            <button class="button is-primary is-warning"
+                on:click=move |_| set_run.update(|state| *state = !*state)>
+                    {"play/pause"}
+            </button>
             <button class="button is-primary is-warning"
                 on:click=move |_| set_event.update(|value| *value = Event::Step)>
                     {"Step"}
