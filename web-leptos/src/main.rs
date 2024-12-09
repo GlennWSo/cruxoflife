@@ -127,7 +127,13 @@ fn root_component() -> impl IntoView {
     let view = LocalResource::new(move || {
         let core = core.clone();
         async move {
-            core.process_event(event.get());
+            for effect in core.process_event(event.get()) {
+                match effect {
+                    shared::Effect::Alert(_) => todo!(),
+                    shared::Effect::FileIO(_) => todo!(),
+                    shared::Effect::Render(_) => (),
+                }
+            }
             send_wrapper::SendWrapper::new(TimeoutFuture::new(1)).await;
             core.view()
         }
@@ -144,34 +150,11 @@ fn root_component() -> impl IntoView {
         None => None,
     };
 
-    // Effect::new(move |_| {
-    //     core::update(&core, event.get(), render);
-    // });
-    let (count, set_count) = signal(0_i32);
-
-    let async_data = LocalResource::new(move || add_num(count.get(), 1));
-
-    let async_result = move || {
-        let res = async_data.get();
-
-        if let Some(value) = res {
-            let value = value.deref();
-            set_count.set(*value);
-            format!("{value}")
-        } else {
-            "Loading".into()
-        }
-        // This loading state will only show before the first load
-    };
-
     view! { <>
     <main>
     <section class="section has-text-centered">
-        <p> {async_result}</p>
         <p class="title">{"Crux Counter Example"}</p>
         <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
-        // <p class="is-size-5">{move || view.get().to_string()}</p>
-        // <p class="is-size-5">{width}" "{height}</p>
         <GameCanvas view=Signal::derive(view)/>
         <div class="buttons section is-centered">
             <button class="button is-primary is-warning"
