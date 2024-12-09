@@ -1,5 +1,8 @@
 mod core;
 
+use std::ops::Deref;
+
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use shared::ViewModel;
 use web_sys::PointerEvent;
@@ -109,6 +112,11 @@ fn GameCanvas(view: ReadSignal<ViewModel>) -> impl IntoView {
     }
 }
 
+async fn add_num(val: i32, rhs: i32) -> i32 {
+    send_wrapper::SendWrapper::new(TimeoutFuture::new(1_000)).await;
+    val + rhs
+}
+
 #[component]
 fn root_component() -> impl IntoView {
     let core = core::new();
@@ -118,10 +126,27 @@ fn root_component() -> impl IntoView {
     Effect::new(move |_| {
         core::update(&core, event.get(), render);
     });
+    let (count, set_count) = signal(0_i32);
+
+    let async_data = LocalResource::new(move || add_num(count.get(), 1));
+
+    let async_result = move || {
+        let res = async_data.get();
+
+        if let Some(value) = res {
+            let value = value.deref();
+            set_count.set(*value);
+            format!("{value}")
+        } else {
+            "Loading".into()
+        }
+        // This loading state will only show before the first load
+    };
 
     view! { <>
     <main>
     <section class="section has-text-centered">
+        <p> {async_result}</p>
         <p class="title">{"Crux Counter Example"}</p>
         <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
         <p class="is-size-5">{move || view.get().to_string()}</p>
