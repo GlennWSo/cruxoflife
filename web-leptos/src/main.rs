@@ -114,11 +114,6 @@ fn GameCanvas(#[prop(into)] view: Signal<Option<SendWrapper<shared::ViewModel>>>
     }
 }
 
-async fn add_num(val: i32, rhs: i32) -> i32 {
-    send_wrapper::SendWrapper::new(TimeoutFuture::new(1_000)).await;
-    val + rhs
-}
-
 #[component]
 fn root_component() -> impl IntoView {
     let core = core::new();
@@ -134,7 +129,7 @@ fn root_component() -> impl IntoView {
                     shared::Effect::Render(_) => (),
                 }
             }
-            send_wrapper::SendWrapper::new(TimeoutFuture::new(1)).await;
+            send_wrapper::SendWrapper::new(TimeoutFuture::new(10)).await;
             core.view()
         }
     });
