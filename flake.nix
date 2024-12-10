@@ -30,7 +30,7 @@
       buildToolsVersions = ["34.0.0"];
       includeEmulator = true;
       # emulatorVersion = "30.3.4";
-      platformVersions = ["33" "34"];
+      platformVersions = ["31" "32" "33" "34"];
       includeSources = true;
       includeSystemImages = true;
       systemImageTypes = ["google_apis_playstore"];
@@ -80,7 +80,7 @@
     '';
     startApk = pkgs.writeShellScriptBin "startapk" ''
       echo starts apk on device
-        ${adbBin} -s emulator-$1 shell am start -n com.example.counter/com.example.counter.MainActivity
+        ${adbBin} -s emulator-$1 shell am start -n com.glennwso.cruxoflife/com.glennwso.cruxoflife.MainActivity
     '';
     oneUp = pkgs.writeShellScriptBin "oneup" ''
       ${mkAVD}/bin/mkavd
