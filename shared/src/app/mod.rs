@@ -23,11 +23,13 @@ pub struct Life {
     buffer: CellVector,
 }
 
+const INIT_LIFE: &[u8] = include_bytes!("../../init_life.json");
+
 impl Default for Life {
     fn default() -> Self {
-        let mut life = Self::glider();
-        life.flip_rows();
-        life.translate(&[5, 5]);
+        let life = Life::from_bytes(INIT_LIFE);
+        // life.flip_rows();
+        // life.translate(&[5, 5]);
         life
     }
 }
@@ -49,6 +51,12 @@ impl BitOr for Life {
 /// Life forms
 #[allow(dead_code)]
 impl Life {
+    fn from_bytes(data: &[u8]) -> Life {
+        let coords: CellVector = serde_json::from_slice(data).unwrap();
+        let mut life = Self::empty();
+        life.add_cells(&coords);
+        life
+    }
     fn blinker() -> Self {
         Self::new(&[[0, -1], [0, 0], [0, 1]])
     }
