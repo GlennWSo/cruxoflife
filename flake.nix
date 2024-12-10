@@ -74,6 +74,12 @@
       # set to -port to some int in (5554..=5584).step(2)
       ${emulatorBin} -avd tester -no-boot-anim $@
     '';
+    emulator = pkgs.androidenv.emulateApp {
+      name = "emulate";
+      platformVersion = "31";
+      abiVersion = "x86_64";
+      systemImageType = "google_apis_playstore";
+    };
     installApk = pkgs.writeShellScriptBin "installapk" ''
       echo installs apk to avd
         ${adbBin} -s emulator-$1 install "$2"
@@ -117,6 +123,7 @@
       GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${android.androidsdk}/libexec/android-sdk/build-tools/34.0.0/aapt2";
       RUSTC = "${toolchain}/bin/rustc";
       RUST_CARGO = "${toolchain}/bin/cargo";
+
       buildInputs = with pkgs; [
         typos
         pandoc
@@ -126,6 +133,7 @@
         startAVD
         installApk
         startApk
+        emulator
         oneUp
         sign
 
