@@ -56,6 +56,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.FileOutputStream
+import java.util.Vector
+import java.util.stream.Collectors.toList
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -134,7 +136,19 @@ class MainActivity : ComponentActivity() {
                     this.applicationContext.contentResolver.openInputStream(uri).use { inputStream ->
                         if (inputStream != null) {
                             val core = this.core
-                            core.saveBuffer = inputStream.readAllBytes().toList()
+
+                            // readAllBytes requiers api 33
+                            // core.saveBuffer = inputStream.readAllBytes().toList()
+                            var buffer = Vector<Byte>()
+                            while (true) {
+                                val data = inputStream.read()
+                                if (data < 0) {
+                                    break
+                                }
+                                buffer.add(data.toByte())
+                            }
+                             core.saveBuffer = buffer.toList()
+
                             runBlocking { launch{
                                 core.update(Event.LoadWorld(core.saveBuffer))
                             } }
