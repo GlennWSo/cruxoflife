@@ -27,9 +27,9 @@ const INIT_LIFE: &[u8] = include_bytes!("../../init_life.json");
 
 impl Default for Life {
     fn default() -> Self {
-        let life = Life::from_bytes(INIT_LIFE);
+        let mut life = Life::from_bytes(INIT_LIFE);
         // life.flip_rows();
-        // life.translate(&[5, 5]);
+        life.translate(&[-10, -10]);
         life
     }
 }
