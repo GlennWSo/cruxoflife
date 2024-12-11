@@ -17,7 +17,7 @@ gloo-timers = "0.3.0"
 # gloo-net = { version = "0.6.0", features = ["http"] } # requests for webapps
 js-sys = "0.3.72"
 leptos = { version = "0.7", features = ["csr"] }
-leptos-use = "0.14.0"
+leptos-use = { version = "0.14.0", features = ["use_interval", "use_timestamp"] }
 log = "0.4.22"
 send_wrapper = "0.6.0"
 shared = { path = "../shared" }

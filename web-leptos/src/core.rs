@@ -1,13 +1,9 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
-// use leptos::{spawn_local, SignalUpdate, WriteSignal};
-use leptos::prelude::*;
-use log::info;
-use shared::{App, Effect, Event, ViewModel};
+use shared::{App, Effect};
 
-pub type Core = Arc<shared::Core<Effect, App>>;
-// pub type Core = shared::Core<Effect, App>;
+pub type Core = Rc<shared::Core<Effect, App>>;
 
 pub fn new() -> Core {
-    Arc::new(shared::Core::new())
+    Core::default()
 }

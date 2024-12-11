@@ -1,11 +1,8 @@
 mod core;
 
-use std::ops::Deref;
-
-use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
-use send_wrapper::SendWrapper;
-use shared::ViewModel;
+use leptos_use::use_interval;
+use leptos_use::UseIntervalReturn;
 use web_sys::PointerEvent;
 
 use leptos::mount::mount_to_body;
@@ -16,7 +13,6 @@ use leptos::html;
 use shared::Event;
 
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
 #[allow(unused)]
@@ -25,7 +21,11 @@ use log::{debug, error, info, warn};
 type DragStart = Option<[i32; 2]>;
 
 #[component]
-fn GameCanvas(#[prop(into)] view: Signal<Option<SendWrapper<shared::ViewModel>>>) -> impl IntoView {
+fn GameCanvas(
+    //
+    #[prop(into)] //
+    view: Signal<shared::ViewModel>,
+) -> impl IntoView {
     let canvas_ref = NodeRef::<html::Canvas>::new();
 
     let UseWindowSizeReturn { width, height } = use_window_size();
@@ -85,13 +85,13 @@ fn GameCanvas(#[prop(into)] view: Signal<Option<SendWrapper<shared::ViewModel>>>
                 ctx.line_to(width, y);
             }
 
-            if let Some(view) = view.get() {
-                for [row, col] in &view.life {
-                    let x = camx + *row as f64 * cell_size;
-                    let y = camy + *col as f64 * cell_size;
-                    ctx.rect(x, y, cell_size, cell_size);
-                }
+            // if let Some(view) = view.get() {
+            for [row, col] in &view.get().life {
+                let x = camx + *row as f64 * cell_size;
+                let y = camy + *col as f64 * cell_size;
+                ctx.rect(x, y, cell_size, cell_size);
             }
+            // }
             ctx.fill();
             ctx.stroke();
         }
@@ -118,39 +118,38 @@ fn GameCanvas(#[prop(into)] view: Signal<Option<SendWrapper<shared::ViewModel>>>
 fn root_component() -> impl IntoView {
     let core = core::new();
 
-    let (event, set_event) = signal(Event::Step);
-    let view = LocalResource::new(move || {
-        let core = core.clone();
-        async move {
-            for effect in core.process_event(event.get()) {
-                match effect {
-                    shared::Effect::Alert(_) => todo!(),
-                    shared::Effect::FileIO(_) => todo!(),
-                    shared::Effect::Render(_) => (),
-                }
-            }
-            send_wrapper::SendWrapper::new(TimeoutFuture::new(10)).await;
-            core.view()
-        }
-    });
+    let (event, set_event) = signal(Event::Render);
+    let (view, _) = signal(core.view());
 
     let (running, set_run) = signal(false);
-    let view = move || match view.get() {
-        Some(v) => {
-            if running.get() {
-                set_event.set(Event::Step);
-            }
-            Some(v)
-        }
-        None => None,
-    };
+    let UseIntervalReturn {
+        counter,
+        pause,
+        resume,
+        ..
+    } = use_interval(200);
+
+    Effect::new(move || if running.get() { resume() } else { pause() });
+    {
+        let core = core.clone();
+        Effect::watch(
+            move || counter.get(),
+            move |_, _, _| {
+                let _effects = core.process_event(Event::Step);
+            },
+            false,
+        );
+    }
+    Effect::new(move || {
+        core.process_event(event.get());
+    });
 
     view! { <>
     <main>
     <section class="section has-text-centered">
         <p class="title">{"Crux Counter Example"}</p>
         <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
-        <GameCanvas view=Signal::derive(view)/>
+        <GameCanvas view=view/>
         <div class="buttons section is-centered">
             <button class="button is-primary is-warning"
                 on:click=move |_| set_run.update(|state| *state = !*state)>
