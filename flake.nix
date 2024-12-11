@@ -76,7 +76,7 @@
     '';
     emulator = pkgs.androidenv.emulateApp {
       name = "emulate";
-      platformVersion = "31";
+      platformVersion = "29";
       abiVersion = "x86_64";
       systemImageType = "google_apis_playstore";
     };
