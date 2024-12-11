@@ -1,5 +1,7 @@
 package com.glennwso.cruxoflife.ui.theme
 
+import android.annotation.SuppressLint
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -40,8 +42,12 @@ fun CounterTheme(
 ) {
     val colorScheme = when {
         dynamicColor -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (Build.VERSION.SDK_INT >= 31){
+                val context = LocalContext.current
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else{
+                if (darkTheme) DarkColorScheme else LightColorScheme
+            }
         }
 
         darkTheme -> DarkColorScheme
