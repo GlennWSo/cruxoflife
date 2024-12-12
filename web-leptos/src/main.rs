@@ -104,8 +104,6 @@ fn GameCanvas(
         }
     });
 
-    // let (scroll, set_scroll) =
-
     let wheel_handler = move |ev: WheelEvent| {
         let dy = ev.delta_y();
         // debug!("wheel: {}", dy);
@@ -172,8 +170,8 @@ fn root_component() -> impl IntoView {
     view! { <>
     <main>
     <section class="section has-text-centered">
-        <p class="title">{"Crux Counter Example"}</p>
-        <p class="is-size-5">{"Rust Core, Rust Shell (Leptos)"}</p>
+        <p class="title">{"Crux of Life"}</p>
+        <p class="is-size-5">{"Rust Core, Leptos Shell"}</p>
         <GameCanvas view=view/>
         <div class="buttons section is-centered">
             <button class="button is-primary is-warning"
