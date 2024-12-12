@@ -1,11 +1,12 @@
 mod core;
 
 use leptos::prelude::*;
-use leptos_use::use_interval;
-use leptos_use::UseIntervalReturn;
 use web_sys::PointerEvent;
 
 use leptos::mount::mount_to_body;
+// use leptos_use::docs::{demo_or_body, BooleanDisplay};
+use leptos_use::use_interval;
+use leptos_use::UseIntervalReturn;
 use leptos_use::{use_window_size, UseWindowSizeReturn};
 
 use leptos::html;
@@ -17,6 +18,7 @@ use web_sys::CanvasRenderingContext2d;
 
 #[allow(unused)]
 use log::{debug, error, info, warn};
+use web_sys::WheelEvent;
 
 type DragStart = Option<[i32; 2]>;
 
@@ -33,6 +35,7 @@ fn GameCanvas(
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
     let (camera_pos, set_camera_pos) = signal([0_i32, 0]);
     let (camera_old, set_camera_old) = signal([0_i32, 0]);
+    let (zoom_pow, set_zoom_pow) = signal(1_f64);
     Effect::new(move |_| {
         if let Some(start_pos) = drag_start.get() {
             let end_pos = drag_end.get();
@@ -48,7 +51,9 @@ fn GameCanvas(
         if let Some(canvas) = canvas_ref.get() {
             let width = width.get();
             let height = height.get();
-            let cell_size = 50.0;
+            let zoom = 2_f64.powf(zoom_pow.get()) / 2.0;
+            let cell_size = 40.0 * zoom;
+            debug!("cellsize: {}", cell_size);
             // let zoom = 1.0;
             let ncol = (width / cell_size) as u32 + 2;
             let nrow = (height / cell_size) as u32 + 2;
@@ -66,36 +71,51 @@ fn GameCanvas(
             ctx.set_fill_style_str("red");
             ctx.begin_path();
             ctx.set_line_width(2.0);
+            let camx = camera_pos.get()[0] as f64 + width / 2.0;
+            let camy = camera_pos.get()[1] as f64 + height / 2.0;
 
-            // draw grid
+            if cell_size > 20.0 {
+                // draw grid
 
-            let camx = camera_pos.get()[0] as f64;
-            let camy = camera_pos.get()[1] as f64;
+                let mut x = camx % cell_size - cell_size;
+                let mut y = camy % cell_size - cell_size;
+                for _ in 0..ncol {
+                    x += cell_size;
+                    ctx.move_to(x, 0.0);
+                    ctx.line_to(x, height);
+                }
+                for _ in 0..nrow {
+                    y += cell_size;
+                    ctx.move_to(0.0, y);
+                    ctx.line_to(width, y);
+                }
 
-            let mut x = camx % cell_size - cell_size;
-            let mut y = camy % cell_size - cell_size;
-            for _ in 0..ncol {
-                x += cell_size;
-                ctx.move_to(x, 0.0);
-                ctx.line_to(x, height);
+                // if let Some(view) = view.get() {
             }
-            for _ in 0..nrow {
-                y += cell_size;
-                ctx.move_to(0.0, y);
-                ctx.line_to(width, y);
-            }
-
-            // if let Some(view) = view.get() {
             for [row, col] in &view.get().life {
                 let x = camx + *row as f64 * cell_size;
                 let y = camy + *col as f64 * cell_size;
                 ctx.rect(x, y, cell_size, cell_size);
             }
+
             // }
             ctx.fill();
             ctx.stroke();
         }
     });
+
+    // let (scroll, set_scroll) =
+
+    let wheel_handler = move |ev: WheelEvent| {
+        let dy = ev.delta_y();
+        // debug!("wheel: {}", dy);
+        set_zoom_pow.update(|z| {
+            let new_z = (*z + dy / 1000.0).clamp(-2.0, 2.0);
+
+            debug!("zoom changed to: {new_z}");
+            *z = new_z
+        });
+    };
 
     view! {
         <canvas id="canvas" on:pointerup=move |_|{
@@ -109,7 +129,8 @@ fn GameCanvas(
             set_drag_end.set([ev.offset_x(), ev.offset_y()]);
         }
 
-        node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 80vh; border:2px solid #000000;">
+        on:wheel=wheel_handler
+        node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 60vh; border:2px solid #000000;">
         </canvas>
     }
 }
