@@ -119,29 +119,33 @@ fn root_component() -> impl IntoView {
     let core = core::new();
 
     let (event, set_event) = signal(Event::Render);
-    let (view, _) = signal(core.view());
+    let (view, set_view) = signal(core.view());
 
     let (running, set_run) = signal(false);
+    let millis = 15;
     let UseIntervalReturn {
         counter,
         pause,
         resume,
         ..
-    } = use_interval(200);
+    } = use_interval(millis);
 
-    Effect::new(move || if running.get() { resume() } else { pause() });
-    {
-        let core = core.clone();
-        Effect::watch(
-            move || counter.get(),
-            move |_, _, _| {
-                let _effects = core.process_event(Event::Step);
-            },
-            false,
-        );
-    }
-    Effect::new(move || {
-        core.process_event(event.get());
+    let _timer = Effect::new(move || if running.get() { resume() } else { pause() });
+
+    let _time_stepper = Effect::watch(
+        move || counter.get(),
+        move |_, _, _| set_event.set(Event::Step),
+        false,
+    );
+    let _event_processor = Effect::new(move || {
+        let effects = core.process_event(event.get());
+        for effect in effects {
+            match effect {
+                shared::Effect::Alert(_) => todo!(),
+                shared::Effect::FileIO(_) => todo!(),
+                shared::Effect::Render(_) => set_view.set(core.view()),
+            }
+        }
     });
 
     view! { <>
