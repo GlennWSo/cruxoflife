@@ -1,5 +1,6 @@
 mod core;
 
+use leptos::attr::Width;
 use leptos::prelude::*;
 use web_sys::PointerEvent;
 
@@ -36,6 +37,9 @@ fn GameCanvas(
     let (camera_pos, set_camera_pos) = signal([0_i32, 0]);
     let (camera_old, set_camera_old) = signal([0_i32, 0]);
     let (zoom_pow, set_zoom_pow) = signal(1_f64);
+    // let zoom = 2_f64.powf(zoom_pow.get()) / 2.0;
+    let zoom = move || 2_f64.powf(zoom_pow.get()) / 2.0;
+    let cell_size = move || 40.0 * zoom();
     Effect::new(move |_| {
         if let Some(start_pos) = drag_start.get() {
             let end_pos = drag_end.get();
@@ -43,7 +47,7 @@ fn GameCanvas(
             let old_pos = camera_old.get();
             let new_pos = [drag[0] + old_pos[0], drag[1] + old_pos[1]];
             set_camera_pos.update(|pos| *pos = new_pos);
-            info!("draged:  to {:?}", new_pos);
+            debug!("draged:  to {:?}", new_pos);
         }
     });
 
@@ -51,8 +55,7 @@ fn GameCanvas(
         if let Some(canvas) = canvas_ref.get() {
             let width = width.get();
             let height = height.get();
-            let zoom = 2_f64.powf(zoom_pow.get()) / 2.0;
-            let cell_size = 40.0 * zoom;
+            let cell_size = cell_size();
             debug!("cellsize: {}", cell_size);
             // let zoom = 1.0;
             let ncol = (width / cell_size) as u32 + 2;
@@ -75,8 +78,6 @@ fn GameCanvas(
             let camy = camera_pos.get()[1] as f64 + height / 2.0;
 
             if cell_size > 20.0 {
-                // draw grid
-
                 let mut x = camx % cell_size - cell_size;
                 let mut y = camy % cell_size - cell_size;
                 for _ in 0..ncol {
@@ -115,6 +116,20 @@ fn GameCanvas(
         });
     };
 
+    let click_handler = move |location: [i32; 2]| {
+        let (width, height) = (width.get(), height.get());
+        let camx = camera_pos.get()[0] as f64 + width / 2.0;
+        let camy = camera_pos.get()[1] as f64 + height / 2.0;
+        let quad = [width / 2.0, height / 2.0];
+        let cell_size = 40.0;
+        let worldx = (location[0] as f64 - quad[0]) / zoom() - camx - cell_size / 2.0;
+        let worldy = (location[1] as f64 - quad[1]) / zoom() - camy - cell_size / 2.0;
+        let col = (worldx / cell_size) as i32;
+        let row = (worldy / cell_size) as i32;
+        // let col =col.roundToInt();
+        info!("clicked: row, col: {}, {}", row, col);
+    };
+
     view! {
         <canvas id="canvas" on:pointerup=move |_|{
             set_drag_start.set(None);
@@ -122,6 +137,7 @@ fn GameCanvas(
         }
         on:pointerdown=move|ev|{
             set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
+            click_handler([ev.offset_x(), ev.offset_y()]);
         }
         on:pointermove=move |ev: PointerEvent|{
             set_drag_end.set([ev.offset_x(), ev.offset_y()]);
