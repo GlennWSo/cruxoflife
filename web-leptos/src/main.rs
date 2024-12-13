@@ -2,6 +2,8 @@ mod core;
 
 use leptos::attr::Width;
 use leptos::prelude::*;
+use leptos_use::use_throttle_fn;
+use leptos_use::use_throttle_fn_with_arg;
 use web_sys::PointerEvent;
 
 use leptos::mount::mount_to_body;
@@ -105,16 +107,20 @@ fn GameCanvas(
         }
     });
 
-    let wheel_handler = move |ev: WheelEvent| {
-        let dy = ev.delta_y();
-        // debug!("wheel: {}", dy);
-        set_zoom_pow.update(|z| {
-            let new_z = (*z + dy / 1000.0).clamp(-2.0, 2.0);
+    // let (scroll, set_scrool) = signal(0_f64);
+    let wheel_handler = use_throttle_fn_with_arg(
+        move |dy: f64| {
+            // let dy = scroll.get();
+            // debug!("wheel: {}", dy);
+            set_zoom_pow.update(|z| {
+                let new_z = (*z + dy / 1000.0).clamp(-2.0, 2.0);
 
-            debug!("zoom changed to: {new_z}");
-            *z = new_z
-        });
-    };
+                debug!("zoom changed to: {new_z}");
+                *z = new_z
+            });
+        },
+        20.0,
+    );
 
     let click_handler = move |location: [i32; 2]| {
         let (width, height) = (width.get(), height.get());
@@ -143,7 +149,9 @@ fn GameCanvas(
             set_drag_end.set([ev.offset_x(), ev.offset_y()]);
         }
 
-        on:wheel=wheel_handler
+        on:wheel=move |ev: WheelEvent| {
+            wheel_handler(ev.delta_y());
+        }
         node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 60vh; border:2px solid #000000;">
         </canvas>
     }
