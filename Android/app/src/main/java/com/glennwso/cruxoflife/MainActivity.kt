@@ -197,6 +197,7 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
                 val newScale = zoom * gestureZoom
                 cameraOffset -= pan
                 zoom = newScale
+                coroutineScope.launch { core.update(Event.CameraZoom(zoom)) }
                 coroutineScope.launch { core.update(Event.CameraPan(listOf(cameraOffset.x, cameraOffset.y))) }
 
             })
@@ -222,8 +223,9 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
         if (zoom > 0.4) {
             val nCols = (w / cellSize).roundToInt()
             val nRows = (h / cellSize).roundToInt()
+            val cameraOffset = core.view!!.camera_pan
 
-            var x = (-cameraOffset.x * zoom) % cellSize - (w / 2f) % cellSize - cellSize
+            var x = core.view!!.modx
             repeat(nCols + 1) { col ->
                 x += cellSize
                 drawLine(
@@ -234,7 +236,7 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
                     colorFilter = ColorFilter.tint(Color.Black)
                 )
             }
-            var y = (-cameraOffset.y * zoom) % cellSize - (w / 2f) % cellSize - cellSize
+            var y = core.view!!.mody
 
             repeat(nRows + 1) { row ->
                 y += cellSize

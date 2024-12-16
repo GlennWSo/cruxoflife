@@ -2,7 +2,7 @@ use std::ops::BitOr;
 use std::{collections::HashSet, fmt::Display};
 
 use cgmath::num_traits::Float;
-use cgmath::Vector2;
+use cgmath::{Array, Vector2};
 use crux_core::{macros::Effect, render::Render};
 use serde::{Deserialize, Serialize};
 
@@ -307,7 +307,9 @@ impl Default for Camera {
     }
 }
 impl Camera {
+    /// cell size in world
     const CELL_SIZE: f32 = 30.0;
+    /// cell size in screen space
     const fn cell_size(&self) -> f32 {
         Self::CELL_SIZE * self.zoom
     }
@@ -356,6 +358,10 @@ impl Camera {
     fn set_zoom(&mut self, new_zoom: f32) {
         self.pan += self.screen_size / self.zoom - self.screen_size / new_zoom;
         self.zoom = new_zoom;
+    }
+
+    pub fn grid_mod(&self) -> Vec2 {
+        (-self.pan() % self.cell_size()) - Vec2::from_value(self.cell_size())
     }
 }
 #[cfg(test)]
@@ -412,6 +418,8 @@ pub struct ViewModel {
     /// camera position in screen scale
     pub camera_pan: [f32; 2],
     pub cell_size: f32,
+    pub modx: f32,
+    pub mody: f32,
 }
 impl Display for ViewModel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -427,12 +435,12 @@ impl Display for ViewModel {
 }
 
 impl ViewModel {
-    pub fn modx(&self) -> f32 {
-        -self.camera_pan[0] % self.cell_size - self.cell_size
-    }
-    pub fn mody(&self) -> f32 {
-        -self.camera_pan[1] % self.cell_size - self.cell_size
-    }
+    // pub fn modx(&self) -> f32 {
+    //     -self.camera_pan[0] % self.cell_size - self.cell_size
+    // }
+    // pub fn mody(&self) -> f32 {
+    //     -self.camera_pan[1] % self.cell_size - self.cell_size
+    // }
 }
 
 impl crux_core::App for App {
@@ -506,10 +514,13 @@ impl crux_core::App for App {
             .map(|cell| model.camera.cell2creen(cell).into())
             .collect();
         let grid_offset = model.camera.pan().into();
+        let [modx, mody] = model.camera.grid_mod().into();
         ViewModel {
             cell_coords,
             cell_size: model.camera.cell_size(),
             camera_pan: grid_offset,
+            modx,
+            mody,
         }
     }
 }
