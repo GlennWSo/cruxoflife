@@ -7,6 +7,7 @@ use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
 use leptos_use::UseElementSizeReturn;
+use log::trace;
 use wasm_bindgen::convert::IntoWasmAbi;
 use web_sys::PointerEvent;
 
@@ -188,7 +189,7 @@ fn root_component() -> impl IntoView {
     );
     let _event_processor = Effect::new(move || {
         let event = event.get();
-        debug!("got event: {:#?}", event);
+        trace!("got event: {:#?}", event);
         let effects = core.process_event(event);
         for effect in effects {
             match effect {

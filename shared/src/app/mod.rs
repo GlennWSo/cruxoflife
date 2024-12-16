@@ -1,6 +1,7 @@
 use std::ops::BitOr;
 use std::{collections::HashSet, fmt::Display};
 
+use cgmath::num_traits::Float;
 use cgmath::Vector2;
 use crux_core::{macros::Effect, render::Render};
 use serde::{Deserialize, Serialize};
@@ -328,9 +329,9 @@ impl Camera {
     fn screen2world(&self, screen_pos: &Vec2) -> Vec2 {
         (screen_pos) / self.zoom + self.pan
     }
-    const fn world2cell(&self, world_pos: &Vec2) -> CellCoord {
-        let column = (world_pos.x / Self::CELL_SIZE) as i32;
-        let row = (world_pos.y / Self::CELL_SIZE) as i32;
+    fn world2cell(&self, world_pos: &Vec2) -> CellCoord {
+        let column = (world_pos.x / Self::CELL_SIZE).floor() as i32;
+        let row = (world_pos.y / Self::CELL_SIZE).floor() as i32;
         [row, column]
     }
     fn screen2cell(&self, screen_pos: &Vec2) -> CellCoord {
@@ -427,10 +428,10 @@ impl Display for ViewModel {
 
 impl ViewModel {
     pub fn modx(&self) -> f32 {
-        -self.camera_pan[0] % self.cell_size
+        -self.camera_pan[0] % self.cell_size - self.cell_size
     }
     pub fn mody(&self) -> f32 {
-        -self.camera_pan[1] % self.cell_size
+        -self.camera_pan[1] % self.cell_size - self.cell_size
     }
 }
 
@@ -463,9 +464,12 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::ToggleScreenCoord(screen_pos) => {
-                info!("derp");
-                let coord = model.camera.screen2cell(&screen_pos.into());
-                info!("toggle cell: {:?}", coord);
+                debug!("toggle cell");
+                debug!("screen_pos: {:?}", screen_pos);
+                let world_pos = model.camera.screen2world(&screen_pos.into());
+                debug!("world_pos: {:?}", world_pos);
+                let coord = model.camera.world2cell(&world_pos);
+                debug!("toggle cell: {:?}", coord);
                 model.life.toggle_cell(coord);
                 caps.render.render();
             }
