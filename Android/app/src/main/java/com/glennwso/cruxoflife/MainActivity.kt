@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.FileOutputStream
 import java.util.Vector
-import java.util.stream.Collectors.toList
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -174,12 +174,13 @@ fun Offset.rotateBy(angle: Float): Offset {
 fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
     var cameraOffset by remember { mutableStateOf(Offset.Zero) }
     var zoom by remember { mutableStateOf(1f) }
-    val cellSize = 30f
-    val cellOffset = Offset(cellSize, cellSize)
+
     var cSize by remember { mutableStateOf(Size(100f, 100f)) }
+    LaunchedEffect(cSize) {
+        core.update(Event.CameraSize(listOf(cSize.width, cSize.height)))
+    }
     val h = cSize.height
     val w = cSize.width
-    val quadrant = Offset(w/2f, h/2f)
     val coroutineScope = rememberCoroutineScope()
 
     Canvas(modifier = Modifier
@@ -187,63 +188,44 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
         .background(color = Color.Green)
         .pointerInput(Unit) {
             detectTapGestures(onTap = { location ->
-                // val worldPos = Offset(col*cellSize, row*cellSize)
-                // val location = (worldPos + cameraOffset )*zoom + Offset(w/2f, h/2f)
-                val worldPos = (location - quadrant) / zoom - cameraOffset - cellOffset / 2f
-                val index = (worldPos / cellSize)
-                val col = index.x.roundToInt()
-                val row = index.y.roundToInt()
-
-                val cell = listOf(row, col)
-                coroutineScope.launch { core.update(Event.ToggleCell(cell)) }
+                val cell = listOf(location.x, location.y)
+                coroutineScope.launch { core.update(Event.ToggleScreenCoord(cell)) }
             })
         }
         .pointerInput(Unit) {
-            detectTransformGestures(onGesture = { centroid, pan, gestureZoom, gestureRotate ->
-                val oldScale = zoom
+            detectTransformGestures(onGesture = { _, pan, gestureZoom, _ ->
                 val newScale = zoom * gestureZoom
-                val factor = (newScale / oldScale)
-                val center = cameraOffset + Offset(cSize.width, cSize.height) * zoom / 2f
-
-                cameraOffset += pan / oldScale
-                //offset = offset + centroid / oldScale-  centroid / newScale + pan / oldScale
-                // offset = offset + pan
-                // offset += centroid / oldScale - centroid / newScale
+                cameraOffset -= pan
                 zoom = newScale
+                coroutineScope.launch { core.update(Event.CameraPan(listOf(cameraOffset.x, cameraOffset.y))) }
+
             })
         } ) {
+        cSize = size
         if (running) {
             coroutineScope.launch { core.update(Event.Step()) }
         }
-        val canvasQuadrantSize = size / 2F
-        cSize = size
-
-
-        val cells = core.view?.life ?: listOf()
+        val cells = core.view?.cell_coords ?: listOf()
+        val cellSize = core.view?.cell_size ?: 30f
         cells.forEach { cell ->
-            val row = cell[0]
-            val col = cell[1]
-            val worldPos = Offset(col * cellSize, row * cellSize)
-
-            val screenPos = (worldPos + cameraOffset) * zoom + Offset(w / 2f, h / 2f)
 
             drawRect(
-                color = Color.Black,
-                size = Size(cellSize, cellSize) * zoom,
+                color = Color.Red,
+                size = Size(1f, 1f) * cellSize,
                 topLeft = Offset(
-                    y = screenPos.y,
-                    x = screenPos.x,
+                    x = cell[0],
+                    y = cell[1]
                 )
             )
         }
         // draw cell borders
         if (zoom > 0.4) {
-            val screenCell = cellSize * zoom
-            val nCols = (w / screenCell).roundToInt()
-            val nRows = (h / screenCell).roundToInt()
+            val nCols = (w / cellSize).roundToInt()
+            val nRows = (h / cellSize).roundToInt()
+
+            var x = (-cameraOffset.x * zoom) % cellSize - (w / 2f) % cellSize - cellSize
             repeat(nCols + 1) { col ->
-                val x: Float =
-                    screenCell * col + (cameraOffset.x * zoom) % screenCell + (w / 2f) % screenCell
+                x += cellSize
                 drawLine(
                     strokeWidth = 3f,
                     color = Color.Black,
@@ -252,9 +234,10 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
                     colorFilter = ColorFilter.tint(Color.Black)
                 )
             }
+            var y = (-cameraOffset.y * zoom) % cellSize - (w / 2f) % cellSize - cellSize
+
             repeat(nRows + 1) { row ->
-                val y: Float =
-                    screenCell * row + (cameraOffset.y * zoom) % screenCell + (h / 2f) % screenCell
+                y += cellSize
                 drawLine(
                     strokeWidth = 3f,
                     color = Color.Black,
