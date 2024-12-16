@@ -203,8 +203,12 @@ fn root_component() -> impl IntoView {
     view! { <>
     <main>
     <section class="section has-text-centered">
-        <p class="title">{"Crux of Life"}</p>
-        <p class="is-size-5">{"Rust Core, Leptos Shell"}</p>
+        // <header class="title">
+        <h1 class="is-size-1">
+            <p style="line-height: 100%;">{"Crux of Life"}</p>
+            <p class="is-size-5 mb-5">{"Rust Core, Leptos Shell"}</p>
+        </h1>
+        // </header>
         <GameCanvas view=view set_event=set_event/>
         <div class="buttons section is-centered">
             <button class="button is-primary is-warning"
