@@ -1,5 +1,6 @@
 mod core;
 
+use cgmath::num_traits::Float;
 use leptos::attr::Width;
 use leptos::prelude::*;
 use leptos_use::use_element_size;
@@ -55,23 +56,22 @@ fn GameCanvas(
             let old_cam = camera_old.get();
             let new_pos = [old_cam[0] - drag[0], old_cam[1] - drag[1]];
             set_event.set(Event::CameraPan(new_pos));
-            // info!("draged: {:?}", drag);
         }
     });
-    let (zoom_pow, set_zoom_pow) = signal(1_f64);
-    let zoom = move || 2_f64.powf(zoom_pow.get()) / 2.0;
+    let (zoom_pow, set_zoom_pow) = signal(1_f32);
+    let zoom = move || 2_f32.powf(zoom_pow.get()) / 2.0;
+    // let (zoom, set_zoom) = signal(0_f32);
 
     let wheel_handler = use_throttle_fn_with_arg(
         move |dy: f64| {
-            // let dy = scroll.get();
-            // debug!("wheel: {}", dy);
-            set_zoom_pow.update(|z| {
-                let new_z = (*z + dy / 1000.0).clamp(-2.0, 2.0);
+            set_zoom_pow.update(|old_pow| {
+                let dy = dy as f32;
+                let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
+                let zoom = 2.0.powf(new_pow) / 2.0;
+                // debug!("new zoom is {zoom} from pow: {new_pow}");
+                set_event.set(Event::CameraZoom(zoom));
 
-                debug!("zoom changed to: {new_z}");
-                // set_camera_old.set()
-                set_event.set(Event::CameraZoom(new_z as f32));
-                *z = new_z
+                *old_pow = new_pow
             });
         },
         20.0,
@@ -83,8 +83,6 @@ fn GameCanvas(
             let height = height.get() as f64;
             let view = view.get();
             let cell_size = view.cell_size as f64;
-            debug!("cellsize: {}", cell_size);
-            // let zoom = 1.0;
             let ncol = (width / cell_size) as u32 + 2;
             let nrow = (height / cell_size) as u32 + 2;
 
@@ -137,17 +135,17 @@ fn GameCanvas(
         let camx = view.camera_pan[0] as f64 + height / 2.0;
         // let camy = camera_pos.get()[1] as f64 + height / 2.0;
         let quad = [width / 2.0, height / 2.0];
-        let cell_size = 40.0 * zoom();
+        let cell_size = 40.0 * zoom() as f64;
         let screen_col = ((location[0] as f64 + cell_size * 0.0) / cell_size) as i32;
         let screen_row = ((location[1] as f64 + cell_size * 0.0) / cell_size) as i32;
         let world_col = screen_col - (camx / cell_size) as i32;
         // let worldy = ;
         // let col =col.roundToInt();
-        info!("w: {}", width);
-        info!("location: {:?}", location);
-        info!("clicked_screen r:{} c:{}", screen_row, screen_col);
-        info!("world c:{}", world_col);
-        info!("camx: {}", camx);
+        debug!("w: {}", width);
+        debug!("location: {:?}", location);
+        debug!("clicked_screen r:{} c:{}", screen_row, screen_col);
+        debug!("world c:{}", world_col);
+        debug!("camx: {}", camx);
     };
 
     view! {

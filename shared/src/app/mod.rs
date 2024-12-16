@@ -1,14 +1,13 @@
 use std::ops::BitOr;
 use std::{collections::HashSet, fmt::Display};
 
-use cgmath::{Array, RelativeEq, Vector2};
+use cgmath::Vector2;
 use crux_core::{macros::Effect, render::Render};
-use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
 mod capabilities;
 use capabilities::{Alert, FileIO};
-use uniffi::deps::log::info;
+// use uniffi::deps::log::{debug, info};
 
 #[derive(Default)]
 pub struct App;
@@ -352,8 +351,7 @@ impl Camera {
         self.pan = new_pos / self.zoom;
     }
     fn set_zoom(&mut self, new_zoom: f32) {
-        self.pan += (self.screen_size / self.zoom - self.screen_size / new_zoom) / 2.0;
-        info!("not derp7");
+        self.pan += self.screen_size / self.zoom - self.screen_size / new_zoom;
         self.zoom = new_zoom;
     }
 }
