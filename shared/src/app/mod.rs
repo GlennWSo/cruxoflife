@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 
 mod capabilities;
 use capabilities::{Alert, FileIO};
-// use uniffi::deps::log::{debug, info};
+#[allow(unused)]
+// use log::{debug, error, info, warn};
+use uniffi::deps::log::{debug, info};
 
 #[derive(Default)]
 pub struct App;
@@ -384,6 +386,7 @@ pub enum Event {
     CameraPan([f32; 2]),
     CameraSize([f32; 2]),
     CameraZoom(f32),
+    ToggleScreenCoord([f32; 2]),
 }
 
 #[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
@@ -456,6 +459,13 @@ impl crux_core::App for App {
                 caps.alert.info(msg);
             }
             Event::ToggleCell(coord) => {
+                model.life.toggle_cell(coord);
+                caps.render.render();
+            }
+            Event::ToggleScreenCoord(screen_pos) => {
+                info!("derp");
+                let coord = model.camera.screen2cell(&screen_pos.into());
+                info!("toggle cell: {:?}", coord);
                 model.life.toggle_cell(coord);
                 caps.render.render();
             }

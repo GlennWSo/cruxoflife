@@ -48,22 +48,30 @@ fn GameCanvas(
     let (drag_start, set_drag_start) = signal(DragStart::default());
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
     let (camera_old, set_camera_old) = signal([0_f32, 0.0]);
-    Effect::new(move |_| {
+    Effect::new(move |old_v: Option<[f32; 2]>| {
+        let old_v = old_v.unwrap_or_default();
         if let Some(start_pos) = drag_start.get() {
             let end_pos = drag_end.get();
             let drag = [end_pos[0] - start_pos[0], end_pos[1] - start_pos[1]];
             let drag = drag.map(|e| e as f32);
             let old_cam = camera_old.get();
             let new_pos = [old_cam[0] - drag[0], old_cam[1] - drag[1]];
-            set_event.set(Event::CameraPan(new_pos));
+            if new_pos != old_v {
+                set_event.set(Event::CameraPan(new_pos));
+            }
+            new_pos
+        } else {
+            old_v
         }
     });
     let (zoom_pow, set_zoom_pow) = signal(1_f32);
-    let zoom = move || 2_f32.powf(zoom_pow.get()) / 2.0;
+    // let zoom = move || 2_f32.powf(zoom_pow.get()) / 2.0;
     // let (zoom, set_zoom) = signal(0_f32);
 
     let wheel_handler = use_throttle_fn_with_arg(
         move |dy: f64| {
+            set_camera_old.set(view.get().camera_pan);
+
             set_zoom_pow.update(|old_pow| {
                 let dy = dy as f32;
                 let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
@@ -130,32 +138,18 @@ fn GameCanvas(
         }
     });
     let click_handler = move |location: [i32; 2]| {
-        let (width, height) = (width.get(), height.get());
-        let view = view.get();
-        let camx = view.camera_pan[0] as f64 + height / 2.0;
-        // let camy = camera_pos.get()[1] as f64 + height / 2.0;
-        let quad = [width / 2.0, height / 2.0];
-        let cell_size = 40.0 * zoom() as f64;
-        let screen_col = ((location[0] as f64 + cell_size * 0.0) / cell_size) as i32;
-        let screen_row = ((location[1] as f64 + cell_size * 0.0) / cell_size) as i32;
-        let world_col = screen_col - (camx / cell_size) as i32;
-        // let worldy = ;
-        // let col =col.roundToInt();
-        debug!("w: {}", width);
         debug!("location: {:?}", location);
-        debug!("clicked_screen r:{} c:{}", screen_row, screen_col);
-        debug!("world c:{}", world_col);
-        debug!("camx: {}", camx);
+        set_event.set(Event::ToggleScreenCoord(location.map(|e| e as f32)))
     };
 
     view! {
-        <canvas id="canvas" on:pointerup=move |_|{
+        <canvas id="canvas" on:pointerup=move |ev|{
             set_drag_start.set(None);
             set_camera_old.set(view.get().camera_pan);
+            click_handler([ev.offset_x(), ev.offset_y()]);
         }
         on:pointerdown=move|ev|{
             set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
-            click_handler([ev.offset_x(), ev.offset_y()]);
         }
         on:pointermove=move |ev: PointerEvent|{
             set_drag_end.set([ev.offset_x(), ev.offset_y()]);
@@ -163,7 +157,6 @@ fn GameCanvas(
 
         on:wheel=move |ev: WheelEvent| {
             wheel_handler(ev.delta_y());
-            set_camera_old.set(view.get().camera_pan);
         }
         node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 60vh; border:2px solid #000000;">
         </canvas>
@@ -194,7 +187,9 @@ fn root_component() -> impl IntoView {
         false,
     );
     let _event_processor = Effect::new(move || {
-        let effects = core.process_event(event.get());
+        let event = event.get();
+        debug!("got event: {:#?}", event);
+        let effects = core.process_event(event);
         for effect in effects {
             match effect {
                 shared::Effect::Alert(_) => todo!(),
