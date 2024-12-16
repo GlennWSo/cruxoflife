@@ -359,6 +359,9 @@ impl Camera {
         self.pan += self.screen_size / self.zoom - self.screen_size / new_zoom;
         self.zoom = new_zoom;
     }
+    // fn set_pan_zoom(&mut self, new_zoom: f32, new_pan: impl Into<Vec2>) {
+
+    // }
 
     pub fn grid_mod(&self) -> Vec2 {
         (-self.pan() % self.cell_size()) - Vec2::from_value(self.cell_size())
@@ -393,6 +396,7 @@ pub enum Event {
     CameraPan([f32; 2]),
     CameraSize([f32; 2]),
     CameraZoom(f32),
+    CameraPanZoom([f32; 3]),
     ToggleScreenCoord([f32; 2]),
 }
 
@@ -486,17 +490,25 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::SpawnGlider(_coord) => todo!(),
-            Event::CameraPan(delta) => {
-                model.camera.set_cam_pos(delta);
-                caps.render.render();
-            }
             Event::CameraSize(size) => {
                 model.camera.screen_size = size.map(|e| e / 2.0).into();
                 caps.render.render()
             }
+            Event::CameraPan(new_pos) => {
+                model.camera.set_cam_pos(new_pos);
+                caps.render.render();
+            }
             Event::CameraZoom(z) => {
                 model.camera.set_zoom(z);
                 caps.render.render()
+            }
+            Event::CameraPanZoom(data) => {
+                // val center = cameraOffset + Offset(cSize.width, cSize.height) * zoom / 2f
+                let pan: Vec2 = [data[0], data[1]].into();
+
+                model.camera.set_cam_pos(pan);
+                model.camera.set_zoom(data[2]);
+                caps.render.render();
             }
         }
     }

@@ -112,8 +112,8 @@ fn GameCanvas(
             // let camy = camera_pos.get()[1] as f64 + height / 2.0;
 
             if cell_size > 20.0 {
-                let mut x = view.modx() as f64;
-                let mut y = view.mody() as f64;
+                let mut x = view.modx as f64;
+                let mut y = view.mody as f64;
                 for _ in 0..ncol {
                     x += cell_size;
                     ctx.move_to(x, 0.0);

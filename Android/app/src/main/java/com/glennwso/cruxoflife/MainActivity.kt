@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
-    var cameraOffset by remember { mutableStateOf(Offset.Zero) }
+//    var cameraOffset by remember { mutableStateOf(Offset.Zero) }
     var zoom by remember { mutableFloatStateOf(1f) }
 
     var cSize by remember { mutableStateOf(Size(100f, 100f)) }
@@ -181,11 +181,10 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
         .pointerInput(Unit) {
             detectTransformGestures(onGesture = { _, pan, gestureZoom, _ ->
                 val newScale = zoom * gestureZoom
-                cameraOffset -= pan
+                val oldOffset = Offset(core.view!!.camera_pan[0], core.view!!.camera_pan[1])
+                val cameraOffset = oldOffset - pan
                 zoom = newScale
-                coroutineScope.launch { core.update(Event.CameraZoom(zoom)) }
-                coroutineScope.launch { core.update(Event.CameraPan(listOf(cameraOffset.x, cameraOffset.y))) }
-
+                coroutineScope.launch { core.update(Event.CameraPanZoom(listOf(cameraOffset.x, cameraOffset.y, zoom))) }
             })
         } ) {
         cSize = size
