@@ -12,6 +12,7 @@ name = "shared"
 typegen = ["crux_core/typegen"]
 
 [dependencies]
+cgmath = { version = "0.18.0", features = ["serde", "swizzle"] }
 crux_core= { workspace=true, features = ["typegen"] }
 serde = { workspace = true, features = ["derive"] }
 lazy_static = "1.5.0"

@@ -1,21 +1,25 @@
 use std::ops::BitOr;
 use std::{collections::HashSet, fmt::Display};
 
+use cgmath::{Array, RelativeEq, Vector2};
 use crux_core::{macros::Effect, render::Render};
 use crux_http::Http;
 use serde::{Deserialize, Serialize};
 
 mod capabilities;
 use capabilities::{Alert, FileIO};
+use uniffi::deps::log::info;
 
 #[derive(Default)]
 pub struct App;
 
+/// [row, column]
 type CellCoord = [i32; 2];
 
 type CellSet = HashSet<CellCoord>;
 
 type CellVector = Vec<CellCoord>;
+pub type Vec2 = Vector2<f32>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Life {
@@ -280,9 +284,97 @@ mod test_life {
 #[derive(Default)]
 pub struct Model {
     life: Life,
+    camera: Camera,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+struct Camera {
+    /// halfsize of screen
+    screen_size: Vec2,
+    /// camera pos in world space
+    pan: Vec2,
+    /// (world_size) * zoom = screen_size
+    zoom: f32,
+}
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            screen_size: Vec2::new(300.0, 300.0),
+            pan: [0.0, 0.0].into(),
+            zoom: 1.0,
+        }
+    }
+}
+impl Camera {
+    const CELL_SIZE: f32 = 30.0;
+    const fn cell_size(&self) -> f32 {
+        Self::CELL_SIZE * self.zoom
+    }
+
+    const fn cell2world(&self, cell: &CellCoord) -> Vec2 {
+        let x = cell[1] as f32 * Self::CELL_SIZE;
+        let y = cell[0] as f32 * Self::CELL_SIZE;
+        Vec2::new(x, y)
+    }
+    fn world2screen(&self, world_pos: &Vec2) -> Vec2 {
+        let screen = (world_pos - self.pan) * self.zoom; //+ self.screen_size;
+        screen
+    }
+    fn cell2creen(&self, cell: &CellCoord) -> Vec2 {
+        let pos = self.cell2world(cell);
+        self.world2screen(&pos)
+    }
+
+    fn screen2world(&self, screen_pos: &Vec2) -> Vec2 {
+        (screen_pos - self.screen_size) / self.zoom + self.pan
+    }
+    const fn world2cell(&self, world_pos: &Vec2) -> CellCoord {
+        let column = (world_pos.x / Self::CELL_SIZE) as i32;
+        let row = (world_pos.y / Self::CELL_SIZE) as i32;
+        [row, column]
+    }
+    fn screen2cell(&self, screen_pos: &Vec2) -> CellCoord {
+        let world_pos = self.screen2world(screen_pos);
+        self.world2cell(&world_pos)
+    }
+    /// returns (min, max_coordd
+    fn cell_bounds(&self) -> (CellCoord, CellCoord) {
+        let min = self.screen2cell(&Vec2::new(0.0, 0.0));
+        let max = self.screen2cell(&(self.screen_size * 2.0));
+        (min, max)
+    }
+    /// camera offset in screen space
+    fn pan(&self) -> Vec2 {
+        self.pan * self.zoom
+    }
+
+    fn set_cam_pos(&mut self, new_pos: impl Into<Vec2>) {
+        let new_pos: Vec2 = new_pos.into();
+        self.pan = new_pos / self.zoom;
+    }
+    fn set_zoom(&mut self, new_zoom: f32) {
+        self.pan += (self.screen_size / new_zoom - self.screen_size / self.zoom) / 2.0;
+        info!("not derp6");
+        self.zoom = new_zoom;
+    }
+}
+#[cfg(test)]
+mod test_camera_transforms {
+    use super::*;
+
+    #[test]
+    fn test_world2screen_inversion() {
+        let mut camera = Camera::default();
+        camera.zoom = 1.5;
+        camera.pan = Vec2::new(30.0, 11.0);
+
+        let screen_pos = Vec2::new(200.0, 150.0);
+        let world_pos = camera.screen2world(&screen_pos);
+        assert_ne!(screen_pos, world_pos);
+        assert_eq!(screen_pos, camera.world2screen(&world_pos));
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Event {
     Render,
     Step,
@@ -291,6 +383,9 @@ pub enum Event {
     SpawnGlider(CellCoord),
     SaveWorld,
     LoadWorld(Vec<u8>),
+    CameraPan([f32; 2]),
+    CameraSize([f32; 2]),
+    CameraZoom(f32),
 }
 
 #[cfg_attr(feature = "typegen", derive(crux_core::macros::Export))]
@@ -303,19 +398,38 @@ pub struct Capabilites {
     file_io: FileIO<Event>,
 }
 
+// #[derive(Serialize, Deserialize, Clone)]
+// struct LifeView {
+//     coords: [f32; 2],
+//     size: f32,
+// }
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
-    pub life: Vec<CellCoord>,
+    pub cell_coords: Vec<[f32; 2]>,
+    /// camera position in screen scale
+    pub camera_pan: [f32; 2],
+    pub cell_size: f32,
 }
 impl Display for ViewModel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.life.is_empty() {
+        if self.cell_coords.is_empty() {
             return write!(f, "Empty");
         }
-        let r = self.life.iter().max_by(|a, b| a[0].cmp(&b[0])).unwrap()[0];
+        // todo!()
+        write!(f, "derp")
+        // // let r = self.life.iter().max_by(|a, b| a[0].cmp(&b[0])).unwrap()[0];
 
-        let c = self.life.iter().max_by(|a, b| a[1].cmp(&b[1])).unwrap()[1];
-        write!(f, "r: {r} c: {c}")
+        // // let c = self.life.iter().max_by(|a, b| a[1].cmp(&b[1])).unwrap()[1];
+    }
+}
+
+impl ViewModel {
+    pub fn modx(&self) -> f32 {
+        -self.camera_pan[0] % self.cell_size
+    }
+    pub fn mody(&self) -> f32 {
+        -self.camera_pan[1] % self.cell_size
     }
 }
 
@@ -352,12 +466,38 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::SpawnGlider(_coord) => todo!(),
+            Event::CameraPan(delta) => {
+                model.camera.set_cam_pos(delta);
+                caps.render.render();
+            }
+            Event::CameraSize(size) => {
+                model.camera.screen_size = size.map(|e| e / 2.0).into();
+                caps.render.render()
+            }
+            Event::CameraZoom(z) => {
+                model.camera.set_zoom(z);
+                caps.render.render()
+            }
         }
     }
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
+        let (min_cell, max_cell) = model.camera.cell_bounds();
+        let cell_coords = model
+            .life
+            .state
+            .iter()
+            .filter(|cell| cell[0] >= min_cell[0])
+            .filter(|cell| cell[1] >= min_cell[1])
+            .filter(|cell| cell[0] <= max_cell[0])
+            .filter(|cell| cell[1] <= max_cell[1])
+            .map(|cell| model.camera.cell2creen(cell).into())
+            .collect();
+        let grid_offset = model.camera.pan().into();
         ViewModel {
-            life: model.life.state.iter().copied().collect(),
+            cell_coords,
+            cell_size: model.camera.cell_size(),
+            camera_pan: grid_offset,
         }
     }
 }
