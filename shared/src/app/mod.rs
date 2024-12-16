@@ -35,7 +35,7 @@ impl Default for Life {
     fn default() -> Self {
         let mut life = Life::from_bytes(INIT_LIFE);
         // life.flip_rows();
-        life.translate(&[-10, -10]);
+        life.translate(&[-7, -10]);
         life
     }
 }
