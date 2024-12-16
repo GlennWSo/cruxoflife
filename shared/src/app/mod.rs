@@ -299,9 +299,10 @@ struct Camera {
 }
 impl Default for Camera {
     fn default() -> Self {
+        let screen_size = Vec2::new(300.0, 300.0);
         Self {
-            screen_size: Vec2::new(300.0, 300.0),
-            pan: [0.0, 0.0].into(),
+            screen_size,
+            pan: -screen_size / 2.0,
             zoom: 1.0,
         }
     }
@@ -491,7 +492,10 @@ impl crux_core::App for App {
             }
             Event::SpawnGlider(_coord) => todo!(),
             Event::CameraSize(size) => {
-                model.camera.screen_size = size.map(|e| e / 2.0).into();
+                let new_size = size.map(|e| e / 2.0).into();
+                let world_size_diff = (new_size - model.camera.screen_size) / model.camera.zoom;
+                model.camera.pan -= world_size_diff;
+                model.camera.screen_size = new_size;
                 caps.render.render()
             }
             Event::CameraPan(new_pos) => {
