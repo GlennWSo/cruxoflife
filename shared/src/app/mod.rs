@@ -325,7 +325,7 @@ impl Camera {
     }
 
     fn screen2world(&self, screen_pos: &Vec2) -> Vec2 {
-        (screen_pos - self.screen_size) / self.zoom + self.pan
+        (screen_pos) / self.zoom + self.pan
     }
     const fn world2cell(&self, world_pos: &Vec2) -> CellCoord {
         let column = (world_pos.x / Self::CELL_SIZE) as i32;
@@ -352,8 +352,8 @@ impl Camera {
         self.pan = new_pos / self.zoom;
     }
     fn set_zoom(&mut self, new_zoom: f32) {
-        self.pan += (self.screen_size / new_zoom - self.screen_size / self.zoom) / 2.0;
-        info!("not derp6");
+        self.pan += (self.screen_size / self.zoom - self.screen_size / new_zoom) / 2.0;
+        info!("not derp7");
         self.zoom = new_zoom;
     }
 }

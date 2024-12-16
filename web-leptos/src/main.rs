@@ -69,6 +69,7 @@ fn GameCanvas(
                 let new_z = (*z + dy / 1000.0).clamp(-2.0, 2.0);
 
                 debug!("zoom changed to: {new_z}");
+                // set_camera_old.set()
                 set_event.set(Event::CameraZoom(new_z as f32));
                 *z = new_z
             });
@@ -164,6 +165,7 @@ fn GameCanvas(
 
         on:wheel=move |ev: WheelEvent| {
             wheel_handler(ev.delta_y());
+            set_camera_old.set(view.get().camera_pan);
         }
         node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 60vh; border:2px solid #000000;">
         </canvas>
