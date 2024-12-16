@@ -111,7 +111,9 @@ fn GameCanvas(
             // let camx = camera_pos.get()[0] as f64 + width / 2.0;
             // let camy = camera_pos.get()[1] as f64 + height / 2.0;
 
-            if cell_size > 20.0 {
+            let draw_grid = cell_size > 13.0;
+            if draw_grid {
+                ctx.set_line_width(2.0);
                 let mut x = view.modx as f64;
                 let mut y = view.mody as f64;
                 for _ in 0..ncol {
@@ -126,6 +128,8 @@ fn GameCanvas(
                 }
 
                 // if let Some(view) = view.get() {
+            } else {
+                // ctx.set_line_width(0.0);
             }
             for [x, y] in &view.cell_coords {
                 let x = *x as f64;
@@ -135,7 +139,9 @@ fn GameCanvas(
 
             // }
             ctx.fill();
-            ctx.stroke();
+            if draw_grid {
+                ctx.stroke();
+            }
         }
     });
     let click_handler = move |location: [i32; 2]| {
