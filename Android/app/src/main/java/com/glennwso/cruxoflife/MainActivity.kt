@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,10 +59,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.FileOutputStream
 import java.util.Vector
-import kotlin.math.PI
-import kotlin.math.cos
+
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 // Request code for creating a PDF document.
 const val CREATE_FILE = 1
@@ -109,18 +108,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    suspend fun loadWorld() {
-
-    }
-
     @SuppressLint("MissingSuperCall")
     override fun onActivityResult(
-        requestCode: Int, resultCode: Int, resultData: Intent?) {
+        requestCode: Int, resultCode: Int, data: Intent?) {
             if (requestCode == CREATE_FILE
                 && resultCode == Activity.RESULT_OK) {
                 // The result data contains a URI for the document or directory that
                 // the user selected.
-                resultData?.data?.also { uri ->
+                data?.data?.also { uri ->
                     // Perform operations on the document using its URI.
                     this.applicationContext.contentResolver.openFileDescriptor(uri, "w")?.use {
                         FileOutputStream(it.fileDescriptor).use {
@@ -131,7 +126,7 @@ class MainActivity : ComponentActivity() {
             }
             if (requestCode == READ_FILE
                 && resultCode == Activity.RESULT_OK) {
-                resultData?.data?.also { uri ->
+                data?.data?.also { uri ->
                     // Perform operations on the document using its URI.
                     this.applicationContext.contentResolver.openInputStream(uri).use { inputStream ->
                         if (inputStream != null) {
@@ -139,7 +134,7 @@ class MainActivity : ComponentActivity() {
 
                             // readAllBytes requiers api 33
                             // core.saveBuffer = inputStream.readAllBytes().toList()
-                            var buffer = Vector<Byte>()
+                            val buffer = Vector<Byte>()
                             while (true) {
                                 val data = inputStream.read()
                                 if (data < 0) {
@@ -161,19 +156,10 @@ class MainActivity : ComponentActivity() {
 
     }
 
-
-fun Offset.rotateBy(angle: Float): Offset {
-    val angleInRadians = angle * (PI / 180)
-    val cos = cos(angleInRadians)
-    val sin = sin(angleInRadians)
-    return Offset((x * cos - y * sin).toFloat(), (x * sin + y * cos).toFloat())
-}
-
-
 @Composable
 fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
     var cameraOffset by remember { mutableStateOf(Offset.Zero) }
-    var zoom by remember { mutableStateOf(1f) }
+    var zoom by remember { mutableFloatStateOf(1f) }
 
     var cSize by remember { mutableStateOf(Size(100f, 100f)) }
     LaunchedEffect(cSize) {
@@ -223,7 +209,6 @@ fun LifeGrid(activity: Activity?, core: Core = viewModel(), running: Boolean){
         if (zoom > 0.4) {
             val nCols = (w / cellSize).roundToInt()
             val nRows = (h / cellSize).roundToInt()
-            val cameraOffset = core.view!!.camera_pan
 
             var x = core.view!!.modx
             repeat(nCols + 1) { col ->
