@@ -165,7 +165,7 @@ fn GameCanvas(
         on:wheel=move |ev: WheelEvent| {
             wheel_handler(ev.delta_y());
         }
-        node_ref=canvas_ref width=800 height=800 style="width:80vw; height: 60vh; border:2px solid #000000;">
+        node_ref=canvas_ref width=800 height=800 style="width:101vw; height: 100vh; border:2px solid #000000; position: absolute; top:0px; left:0px;">
         </canvas>
     }
 }
@@ -206,16 +206,16 @@ fn root_component() -> impl IntoView {
         }
     });
 
-    view! { <>
-    <main>
-    <section class="section has-text-centered">
+    view! {
+    <main >
+    <section class="section has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
+        <GameCanvas view=view set_event=set_event /> // is drawn "behind" the rest of the content
         // <header class="title">
-        <h1 class="is-size-1">
+        <h1 class="is-size-1 p-1 has-background-primary" style="position:relative; z-index:1;">
             <p style="line-height: 100%;">{"Crux of Life"}</p>
-            <p class="is-size-5 mb-5">{"Rust Core, Leptos Shell"}</p>
+            <p class="is-size-5">{"Rust Core, Leptos Shell"}</p>
         </h1>
         // </header>
-        <GameCanvas view=view set_event=set_event/>
         <div class="buttons section is-centered">
             <button class="button is-primary is-warning"
                 on:click=move |_| set_run.update(|state| *state = !*state)>
@@ -229,7 +229,6 @@ fn root_component() -> impl IntoView {
 
     </section>
     </main>
-    </>
     }
 }
 
