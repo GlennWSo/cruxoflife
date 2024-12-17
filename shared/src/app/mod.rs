@@ -477,12 +477,8 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::ToggleScreenCoord(screen_pos) => {
-                debug!("toggle cell");
-                debug!("screen_pos: {:?}", screen_pos);
                 let world_pos = model.camera.screen2world(&screen_pos.into());
-                debug!("world_pos: {:?}", world_pos);
                 let coord = model.camera.world2cell(&world_pos);
-                debug!("toggle cell: {:?}", coord);
                 model.life.toggle_cell(coord);
                 caps.render.render();
             }

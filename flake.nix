@@ -123,6 +123,7 @@
       GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${android.androidsdk}/libexec/android-sdk/build-tools/34.0.0/aapt2";
       RUSTC = "${toolchain}/bin/rustc";
       RUST_CARGO = "${toolchain}/bin/cargo";
+      TRUNK_STAGING_DIR = "/tmp/trunk/stage";
 
       buildInputs = with pkgs; [
         typos
@@ -141,6 +142,8 @@
         rust-analyzer
         bacon
         cargo-insta
+        cargo-leptos
+        cargo-watch
 
         cargo-ndk
         cargo-apk
@@ -150,6 +153,8 @@
         trunk
         nodejs
         static-server
+        wrangler
+        bore-cli
 
         (android-studio.withSdk android.androidsdk)
         ktlint

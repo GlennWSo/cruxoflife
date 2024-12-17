@@ -3,11 +3,13 @@ mod core;
 use cgmath::num_traits::Float;
 use leptos::attr::Width;
 use leptos::prelude::*;
+use leptos::tachys::dom::window;
 use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
 use leptos_use::UseElementSizeReturn;
 use log::trace;
+use shared::Vec2;
 use wasm_bindgen::convert::IntoWasmAbi;
 use web_sys::PointerEvent;
 
@@ -26,9 +28,43 @@ use web_sys::CanvasRenderingContext2d;
 
 #[allow(unused)]
 use log::{debug, error, info, warn};
+use web_sys::TouchEvent;
 use web_sys::WheelEvent;
+use web_sys::Window;
 
 type DragStart = Option<[i32; 2]>;
+
+fn is_touch_device(window: Window) -> bool {
+    let navigator = window.navigator();
+    navigator.max_touch_points() > 0
+}
+
+fn avg_touch_pos(ev: &TouchEvent) -> Option<Vec2> {
+    let n = ev.touches().length();
+    if n == 0 {
+        return None;
+    }
+    let touch_sum: Vec2 = (0..n)
+        .filter_map(|i| ev.touches().get(i))
+        .map(|t| Vec2::new(t.client_x() as f32, t.client_y() as f32))
+        .sum();
+    let avg = touch_sum / (n as f32);
+    Some(avg)
+}
+
+fn avg_touch_moved_pos(ev: &TouchEvent) -> Option<Vec2> {
+    let total_n = ev.touches().length();
+    let changed_n = ev.changed_touches().length();
+    if changed_n < 1 {
+        return None;
+    }
+    let touch_sum: Vec2 = (0..changed_n)
+        .filter_map(|i| ev.touches().get(i))
+        .map(|t| Vec2::new(t.client_x() as f32, t.client_y() as f32))
+        .sum();
+    let avg = touch_sum / (total_n as f32);
+    Some(avg)
+}
 
 #[component]
 fn GameCanvas(
@@ -36,6 +72,7 @@ fn GameCanvas(
     #[prop(into)] //
     view: Signal<shared::ViewModel>,
     set_event: WriteSignal<Event>,
+    is_touch: bool,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<html::Canvas>::new();
 
@@ -77,7 +114,6 @@ fn GameCanvas(
                 let dy = dy as f32;
                 let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
                 let zoom = 2.0.powf(new_pow) / 2.0;
-                // debug!("new zoom is {zoom} from pow: {new_pow}");
                 set_event.set(Event::CameraZoom(zoom));
 
                 *old_pow = new_pow
@@ -145,26 +181,69 @@ fn GameCanvas(
         }
     });
     let click_handler = move |location: [i32; 2]| {
-        debug!("location: {:?}", location);
+        trace!("location: {:?}", location);
         set_event.set(Event::ToggleScreenCoord(location.map(|e| e as f32)))
     };
 
-    view! {
-        <canvas id="canvas" on:pointerup=move |ev|{
+    let handle_pointerup = move |ev: PointerEvent| {
+        if !is_touch {
             set_drag_start.set(None);
             set_camera_old.set(view.get().camera_pan);
             click_handler([ev.offset_x(), ev.offset_y()]);
+            // window().alert_with_message("derp");
+            // panic!();
         }
-        on:pointerdown=move|ev|{
+    };
+    let handle_pointerdown = move |ev: PointerEvent| {
+        if !is_touch {
             set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
         }
-        on:pointermove=move |ev: PointerEvent|{
+    };
+    let handle_pointermove = move |ev: PointerEvent| {
+        if !is_touch {
             set_drag_end.set([ev.offset_x(), ev.offset_y()]);
         }
+    };
 
-        on:wheel=move |ev: WheelEvent| {
-            wheel_handler(ev.delta_y());
+    let handle_touchdown = move |ev: TouchEvent| {
+        if let Some(avg) = avg_touch_pos(&ev) {
+            debug!("t start: {avg:?}");
+            set_drag_start.set(Some([avg.x.floor() as i32, avg.y.floor() as i32]));
+            set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
         }
+    };
+    let handle_touchmove = move |ev: TouchEvent| {
+        if let Some(avg) = avg_touch_pos(&ev) {
+            debug!("t move: {avg:?}");
+            set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
+            ev.prevent_default();
+            // ev.cancel_bubble();
+        }
+    };
+    let handle_touchup = move |_ev: TouchEvent| {
+        // if let Some(avg) = avg_touch_pos(&ev) {
+        let start: Vec2 = drag_start.get().unwrap().map(|e| e as f32).into();
+        let end: Vec2 = drag_end.get().map(|e| e as f32).into();
+        debug!("drag d: {:#?}", end - start);
+
+        set_drag_start.set(None);
+        set_camera_old.set(view.get().camera_pan);
+        click_handler(drag_end.get());
+        // window().alert();
+        // }
+    };
+
+    view! {
+        <canvas  id="canvas"
+            on:pointerdown=handle_pointerdown
+            on:pointermove=handle_pointermove
+            on:pointerup=handle_pointerup
+            on:wheel=move |ev: WheelEvent| {wheel_handler(ev.delta_y());}
+
+            on:touchstart=handle_touchdown
+            on:touchend=handle_touchup
+            on:touchmove=handle_touchmove
+
         node_ref=canvas_ref width=800 height=800 style="width:101vw; height: 100vh; border:2px solid #000000; position: absolute; top:0px; left:0px;">
         </canvas>
     }
@@ -173,6 +252,7 @@ fn GameCanvas(
 #[component]
 fn root_component() -> impl IntoView {
     let core = core::new();
+    let touch_device = is_touch_device(window());
 
     let (event, set_event) = signal(Event::Render);
     let (view, set_view) = signal(core.view());
@@ -206,14 +286,20 @@ fn root_component() -> impl IntoView {
         }
     });
 
+    let touch_label = if touch_device {
+        Some(view! {<p class="is-size-7"> {"Touch Device detected"}</p> })
+    } else {
+        None
+    };
+
     view! {
     <main >
     <section class="section has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
-        <GameCanvas view=view set_event=set_event /> // is drawn "behind" the rest of the content
-        // <header class="title">
+        <GameCanvas view=view set_event=set_event is_touch=touch_device />
         <h1 class="is-size-1 p-1 has-background-primary" style="position:relative; z-index:1;">
             <p style="line-height: 100%;">{"Crux of Life"}</p>
             <p class="is-size-5">{"Rust Core, Leptos Shell"}</p>
+            {touch_label}
         </h1>
         // </header>
         <div class="buttons section is-centered">
