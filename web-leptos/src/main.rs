@@ -1,9 +1,12 @@
 mod core;
 
 use cgmath::num_traits::Float;
+use cgmath::InnerSpace;
+use leptos::attr::default;
 use leptos::attr::Width;
 use leptos::prelude::*;
 use leptos::tachys::dom::window;
+use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
@@ -52,6 +55,24 @@ fn avg_touch_pos(ev: &TouchEvent) -> Option<Vec2> {
     Some(avg)
 }
 
+fn avg_touch_spread(ev: &TouchEvent) -> Option<f32> {
+    let Some(avg) = avg_touch_pos(ev) else {
+        return None;
+    };
+    let n = ev.touches().length();
+    let avg_dist_sum: f32 = (0..n)
+        .filter_map(|i| ev.touches().get(i))
+        .map(|t| (avg - Vec2::new(t.client_x() as f32, t.client_y() as f32)).magnitude())
+        .sum();
+
+    let avg_dist = avg_dist_sum / (n as f32);
+    if avg_dist > 4.0 {
+        Some(avg_dist)
+    } else {
+        None
+    }
+}
+
 fn avg_touch_moved_pos(ev: &TouchEvent) -> Option<Vec2> {
     let total_n = ev.touches().length();
     let changed_n = ev.changed_touches().length();
@@ -86,25 +107,26 @@ fn GameCanvas(
     let (drag_start, set_drag_start) = signal(DragStart::default());
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
     let (camera_old, set_camera_old) = signal([0_f32, 0.0]);
-    Effect::new(move |old_v: Option<[f32; 2]>| {
-        let old_v = old_v.unwrap_or_default();
+    let (zoom_pow, set_zoom_pow) = signal(1_f32);
+    let (zoom, set_zoom) = signal(1_f32);
+    Effect::new(move |old_v: Option<f32>| {
+        let old_v = old_v.unwrap_or(1.0);
+        let zoom = zoom.get();
         if let Some(start_pos) = drag_start.get() {
             let end_pos = drag_end.get();
             let drag = [end_pos[0] - start_pos[0], end_pos[1] - start_pos[1]];
             let drag = drag.map(|e| e as f32);
             let old_cam = camera_old.get();
             let new_pos = [old_cam[0] - drag[0], old_cam[1] - drag[1]];
-            if new_pos != old_v {
-                set_event.set(Event::CameraPan(new_pos));
-            }
-            new_pos
+            set_event.set(Event::CameraPanZoom([new_pos[0], new_pos[1], zoom]));
+            1.0
         } else {
-            old_v
+            if zoom != old_v {
+                set_event.set(Event::CameraZoom(zoom));
+            }
+            zoom
         }
     });
-    let (zoom_pow, set_zoom_pow) = signal(1_f32);
-    // let zoom = move || 2_f32.powf(zoom_pow.get()) / 2.0;
-    // let (zoom, set_zoom) = signal(0_f32);
 
     let wheel_handler = use_throttle_fn_with_arg(
         move |dy: f64| {
@@ -114,9 +136,8 @@ fn GameCanvas(
                 let dy = dy as f32;
                 let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
                 let zoom = 2.0.powf(new_pow) / 2.0;
-                set_event.set(Event::CameraZoom(zoom));
-
-                *old_pow = new_pow
+                *old_pow = new_pow;
+                set_zoom.set(zoom);
             });
         },
         20.0,
@@ -212,11 +233,35 @@ fn GameCanvas(
             set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
         }
     };
+    let (touch_spread, set_spread) = signal(Option::<f32>::default());
+
+    let pinch2zoom = move |ev: &TouchEvent| -> Option<f32> {
+        let new_spread = avg_touch_spread(ev);
+        let Some(mut spread) = new_spread else {
+            set_spread.set(None);
+            return None;
+        };
+        let Some(old_spread) = touch_spread.get() else {
+            set_spread.set(Some(spread));
+            return None;
+        };
+        set_spread.set(Some(spread));
+        set_zoom.update(|zoom| {
+            *zoom = *zoom * spread / old_spread;
+            spread = *zoom;
+        });
+        Some(spread)
+    };
+
     let handle_touchmove = move |ev: TouchEvent| {
         if let Some(avg) = avg_touch_pos(&ev) {
             debug!("t move: {avg:?}");
             set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
             ev.prevent_default();
+            if let Some(zoom) = pinch2zoom(&ev) {
+                set_event.set(Event::CameraZoom(zoom));
+            };
+
             // ev.cancel_bubble();
         }
     };
