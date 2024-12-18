@@ -119,7 +119,7 @@ fn GameCanvas(
             let old_cam = camera_old.get();
             let new_pos = [old_cam[0] - drag[0], old_cam[1] - drag[1]];
             set_event.set(Event::CameraPanZoom([new_pos[0], new_pos[1], zoom]));
-            1.0
+            zoom
         } else {
             if zoom != old_v {
                 set_event.set(Event::CameraZoom(zoom));
@@ -259,7 +259,8 @@ fn GameCanvas(
             set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
             ev.prevent_default();
             if let Some(zoom) = pinch2zoom(&ev) {
-                set_event.set(Event::CameraZoom(zoom));
+                // set_event.set(Event::CameraZoom(zoom));
+                set_zoom.set(zoom);
             };
 
             // ev.cancel_bubble();
