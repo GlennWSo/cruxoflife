@@ -342,7 +342,7 @@ fn root_component() -> impl IntoView {
     <main >
     <section class="section has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
         <GameCanvas view=view set_event=set_event is_touch=touch_device />
-        <div style="margin:0 auto;">
+        <div style="margin-left: auto;">
             <h1 class="is-size-3 px-4 py-3 has-background-primary" style="position:relative; z-index:1; width:fit-content; border-radius:0.3em;">
                 <p style="line-height: 100%;">{"Crux of Life"}</p>
                 <p class="is-size-6">{"Rust Core, Leptos Shell"}</p>
@@ -350,13 +350,16 @@ fn root_component() -> impl IntoView {
             </h1>
         </div>
         // </header>
-        <div class="buttons section is-centered">
+        <div class="buttons is-centered">
             <button class="button is-primary is-warning"
-                on:click=move |_| set_run.update(|state| *state = !*state)>
-                    {"play/pause"}
+            on:click=move |_| set_run.update(|state| *state = !*state)>
+                {move || if running.get() {"Stop"} else {"Run"}}
             </button>
             <button class="button is-primary is-warning"
-                on:click=move |_| set_event.update(|value| *value = Event::Step)>
+                on:click=move |_| {
+                    set_run.update(|state| *state = !*state);
+                    set_event.update(|value| *value = Event::Step);
+                }>
                     {"Step"}
             </button>
         </div>
