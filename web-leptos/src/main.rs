@@ -7,6 +7,9 @@ use leptos::attr::Width;
 use leptos::prelude::*;
 use leptos::tachys::dom::window;
 use leptos_use::core::IntoElementMaybeSignal;
+use leptos_use::storage::use_local_storage;
+use leptos_use::storage::use_local_storage_with_options;
+use leptos_use::storage::UseStorageOptions;
 use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
@@ -15,6 +18,8 @@ use log::trace;
 use shared::Vec2;
 use wasm_bindgen::convert::IntoWasmAbi;
 use web_sys::PointerEvent;
+
+use codee::string::{FromToStringCodec, JsonSerdeCodec};
 
 use leptos::mount::mount_to_body;
 // use leptos_use::docs::{demo_or_body, BooleanDisplay};
@@ -36,6 +41,15 @@ use web_sys::WheelEvent;
 use web_sys::Window;
 
 type DragStart = Option<[i32; 2]>;
+
+const LOREM_IPSUM: &'static str = r#"Lorem Ipsum is simply dummy text of the printing
+ and typesetting industry. Lorem Ipsum has been the industry's standard dummy text
+ever since the 1500s, when an unknown printer took a galley of type and scrambled it to
+make a type specimen book. It has survived not only five centuries, but also the leap
+into electronic typesetting, remaining essentially unchanged. It was popularised in
+the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more
+recently with desktop publishing software like Aldus PageMaker including versions of
+Lorem Ipsum."#;
 
 fn is_touch_device(window: Window) -> bool {
     let navigator = window.navigator();
@@ -337,20 +351,87 @@ fn root_component() -> impl IntoView {
     } else {
         None
     };
+    // let (show_info, set_show_info) = signal(true);
+    // let info_active = move || set_show_info.get().then_some("is-active");
+    let (show_info, set_show_info, _) = use_local_storage_with_options::<bool, JsonSerdeCodec>(
+        "show_info",
+        UseStorageOptions::default().initial_value(true),
+    );
 
-    view! {
-    <main >
-    <section class="section has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
-        <GameCanvas view=view set_event=set_event is_touch=touch_device />
-        <div style="margin-left: auto;">
-            <h1 class="is-size-3 px-4 py-3 has-background-primary" style="position:relative; z-index:1; width:fit-content; border-radius:0.3em;">
-                <p style="line-height: 100%;">{"Crux of Life"}</p>
-                <p class="is-size-6">{"Rust Core, Leptos Shell"}</p>
-                {touch_label}
-            </h1>
+    let background = r#"
+    Crux of life is an implementation of John Conway's "Game of Life"
+    John (December 26, 1937 – April 11, 2020) was a mathematician and professor who hates his creation because
+    the game of life overshadowed his research.
+
+    The game of life is an abstract simulation of life. So what is life about?
+    That's what you make it into, the interesting thing is that even though the simulation has extremely simple rules, the future is often unpredictable.
+
+    Here is an interview with the mathematician https://www.youtube.com/watch?v=E8kUJL04ELA&list=PLt5AfwLFPxWIL8XA1npoNAHseS-j1y-7V&index=1
+    "#;
+    let background_info = view! {
+        <section class="is-size-5 p-4 has-background-dark has-text-light" style="border-radius:0.3em;">
+            <h3 class="is-size-3">"What is this"</h3>
+            <p>r#"
+            Crux of life is an implementation of John Conway's "Game of Life"
+            John (December 26, 1937 – April 11, 2020) was a mathematician and professor who hates his creation because
+            the game of life overshadowed his research.
+            "#
+            </p>
+            <a class="" style=":hover{color:white;}"
+                href=r#"https://www.youtube.com/watch?v=E8kUJL04ELA&list=PLt5AfwLFPxWIL8XA1npoNAHseS-j1y-7V&index=1"#
+                target="_blank"
+            >
+                Here is an interview with the mathematician
+            </a>
+            <h3 class="mt-3 is-size-3">"The Game of Life"</h3>
+            <p class="is-size-5 ">r#"
+            The game of life is an abstract simulation of life. So what is life about?
+            It is what up to you, this is sandbox game. Edit the cells and run the simulations as you like.
+
+            "#
+            </p>
+            <ol class="section">
+            <b>The rules of the simulation</b>
+                <li>"Cells that have 2 or 3 neighbors survive"</li>
+                <li>"Cells that have 2 or 3 neighbors survive"</li>
+            </ol>
+        </section>
+    };
+
+    let info_modal = view! {
+            <div class="modal" class:is-active=show_info on:keydown=move |ev|{
+                info!("keydown");
+            }>
+              <div class="modal-background"></div>
+              <div class="modal-content">
+                <h2 class="is-size-3 mb-4 px-4 py-3 has-background-primary has-text-centered" style="position:relative; border-radius:0.3em;">
+                    <p style="line-height: 100%;">{"crux of life"}</p>
+                    <p class="is-size-6">{"rust core, leptos shell"}</p>
+                    {touch_label}
+                </h2>
+                {background_info}
+
+              </div>
+              <button class="modal-close is-large" aria-label="close"
+                on:click=move |_| set_show_info.set(false)
+              />
+            </div>
+
+    };
+
+    view! { <main>
+    {info_modal}
+
+    <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
+    <GameCanvas view=view set_event=set_event is_touch=touch_device />
+
+        <div class="buttons is-right mb-5">
+            <img alt="info" width="64px" src="/assets/info-icon.svg" hidden=move||{show_info.get()}
+                style="border:none; background:none; position:relative; z-index:1;"
+                on:click=move |_| set_show_info.set(true) />
         </div>
-        // </header>
-        <div class="buttons is-centered">
+
+        <div class="buttons is-centered mb-5">
             <button class="button is-primary is-warning"
             on:click=move |_| set_run.update(|state| *state = !*state)>
                 {move || if running.get() {"Stop"} else {"Run"}}
@@ -360,13 +441,13 @@ fn root_component() -> impl IntoView {
                     set_run.update(|state| *state = !*state);
                     set_event.update(|value| *value = Event::Step);
                 }>
-                    {"Step"}
+                "Step"
             </button>
+            <p>""</p>
         </div>
 
     </section>
-    </main>
-    }
+    </main>}
 }
 
 fn main() {

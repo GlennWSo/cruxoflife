@@ -128,6 +128,7 @@
       buildInputs = with pkgs; [
         typos
         pandoc
+        inkscape
 
         mkAVD
         findPort

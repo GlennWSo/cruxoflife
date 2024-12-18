@@ -11,6 +11,7 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 cgmath = { version = "0.18.0", features = ["serde", "swizzle"] }
+codee = "0.2.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 futures-util = "0.3.31"
