@@ -341,10 +341,10 @@ fn root_component() -> impl IntoView {
     <main >
     <section class="section has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
         <GameCanvas view=view set_event=set_event is_touch=touch_device />
-        <div class="container">
-            <h1 class="is-size-1 p-1 has-background-primary" style="position:relative; z-index:1; width:fit-content;">
+        <div style="margin:0 auto;">
+            <h1 class="is-size-3 px-4 py-3 has-background-primary" style="position:relative; z-index:1; width:fit-content; border-radius:0.3em;">
                 <p style="line-height: 100%;">{"Crux of Life"}</p>
-                <p class="is-size-5">{"Rust Core, Leptos Shell"}</p>
+                <p class="is-size-6">{"Rust Core, Leptos Shell"}</p>
                 {touch_label}
             </h1>
         </div>
