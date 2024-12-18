@@ -5,6 +5,7 @@ use cgmath::InnerSpace;
 use leptos::attr::default;
 use leptos::attr::Width;
 use leptos::prelude::*;
+use leptos::tachys::dom::document;
 use leptos::tachys::dom::window;
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::storage::use_local_storage;
@@ -13,6 +14,7 @@ use leptos_use::storage::UseStorageOptions;
 use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
+use leptos_use::use_window;
 use leptos_use::UseElementSizeReturn;
 use log::trace;
 use shared::Vec2;
@@ -99,6 +101,16 @@ fn avg_touch_moved_pos(ev: &TouchEvent) -> Option<Vec2> {
         .sum();
     let avg = touch_sum / (total_n as f32);
     Some(avg)
+}
+
+fn alert_todo(msg: &str) {
+    let doc = document();
+    // doc.window
+    // let navi = use_window().navigator();
+    let window = window();
+    if let Err(err) = window.alert_with_message(msg) {
+        error!("alert failed with: {err:#?}");
+    };
 }
 
 #[component]
@@ -419,24 +431,46 @@ fn root_component() -> impl IntoView {
 
     };
 
-    view! { <main>
-    {info_modal}
+    let (show_menu, set_show_menu) = signal(false);
 
-    <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh">
-    <GameCanvas view=view set_event=set_event is_touch=touch_device />
-
-        <div class="buttons is-right mb-5">
-            <img alt="info" width="64px" src="/assets/info-icon.svg" hidden=move||{show_info.get()}
+    let menu = view! {<>
+        <div class="buttons m-4"  style="position:absolute; z-index:3;" >
+            <img alt="info" width="64px" src="/assets/menu-icon.svg" hidden=move||{show_menu.get()}
                 style="border:none; background:none; position:relative; z-index:1;"
-                on:click=move |_| set_show_info.set(true) />
+                on:click=move |_| set_show_menu.set(true) />
         </div>
 
+        <aside class="menu m-4 p-4 has-background-primary" class:is-hidden=move||{!show_menu.get()}
+            style="position:absolute; z-index:3; border-radius:0.6em;">
+          <p class="menu-label">Genereal</p>
+          <ul class="menu-list">
+            <li on:click=|_|{
+                alert_todo("Sorry, 'Import world' not yet implemented")
+            }><a>Import World</a></li>
+            <li><a>Save World as</a></li>
+            <li><a>Copy World to clipboard</a></li>
+            <li on:click=move |_|{
+                set_show_info.set(true);
+                set_show_menu.set(false);
+            }><a>About</a></li>
+          </ul>
+        </aside>
+        </>
+    };
+
+    view! { <main>
+    {info_modal}
+    {menu}
+    <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh"
+        on:click=move |ev| set_show_menu.set(false)>
+    <GameCanvas view=view set_event=set_event is_touch=touch_device />
+    <div/> // spacer
         <div class="buttons is-centered mb-5">
-            <button class="button is-primary is-warning"
+            <button class="button is-success" class:is-danger=running
             on:click=move |_| set_run.update(|state| *state = !*state)>
                 {move || if running.get() {"Stop"} else {"Run"}}
             </button>
-            <button class="button is-primary is-warning"
+            <button class="button is-warning"
                 on:click=move |_| {
                     set_run.update(|state| *state = !*state);
                     set_event.update(|value| *value = Event::Step);
