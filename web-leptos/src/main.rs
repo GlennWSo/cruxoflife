@@ -390,11 +390,11 @@ fn root_component() -> impl IntoView {
 
             "#
             </p>
-            <ol class="section">
-            <b>The rules of the simulation</b>
+            <ul class="section" style="list-style:inherit;">
+                <b>The rules of the simulation</b>
                 <li>"Cells that have 2 or 3 neighbors survive"</li>
-                <li>"Cells that have 2 or 3 neighbors survive"</li>
-            </ol>
+                <li>"Empty regions spawn new cells if they have 3 neighbors"</li>
+            </ul>
         </section>
     };
 
