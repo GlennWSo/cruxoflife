@@ -2,11 +2,14 @@ mod core;
 
 use cgmath::num_traits::Float;
 use cgmath::InnerSpace;
+use js_sys::ArrayBuffer;
+use js_sys::DataView;
 use leptos::attr::default;
 use leptos::attr::Width;
+use leptos::prelude::document;
 use leptos::prelude::*;
-use leptos::tachys::dom::document;
 use leptos::tachys::dom::window;
+use leptos::task::spawn_local;
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::storage::use_local_storage;
 use leptos_use::storage::use_local_storage_with_options;
@@ -19,7 +22,7 @@ use leptos_use::UseElementSizeReturn;
 use log::trace;
 use shared::Vec2;
 use wasm_bindgen::convert::IntoWasmAbi;
-use web_sys::PointerEvent;
+use web_sys::{File, PointerEvent};
 
 use codee::string::{FromToStringCodec, JsonSerdeCodec};
 
@@ -433,6 +436,22 @@ fn root_component() -> impl IntoView {
 
     let (show_menu, set_show_menu) = signal(false);
 
+    let input_element: NodeRef<html::Input> = NodeRef::new();
+
+    let load_world_from_js_file = Closure::new(move |js: JsValue| {
+        if let Ok(buff) = js.dyn_into::<ArrayBuffer>() {
+            let byte_length = buff.byte_length() as usize;
+            let data = DataView::new(&buff, 0, byte_length);
+            let data: Vec<_> = (0..byte_length).map(|i| data.get_uint8(i)).collect();
+            #[cfg(debug_assertions)]
+            {
+                let txt = String::from_utf8(data.clone());
+                info!("info {txt:#?}");
+            }
+            set_event.set(Event::LoadWorld(data));
+        }
+    });
+
     let menu = view! {<>
         <div class="buttons m-4"  style="position:absolute; z-index:3;" >
             <img alt="info" width="64px" src="/assets/menu-icon.svg" hidden=move||{show_menu.get()}
@@ -444,11 +463,33 @@ fn root_component() -> impl IntoView {
             style="position:absolute; z-index:3; border-radius:0.6em;">
           <p class="menu-label">Genereal</p>
           <ul class="menu-list">
+            <li>
+            <label for="importworld">Import World </label>
+            <input node_ref=input_element class="input" id="importworld" type="file"
+                on:change=move |ev|{
+                    let files = ev.target().unwrap().unchecked_ref::<web_sys::HtmlInputElement>().files().unwrap();
+                    let file  = files.get(0);
+                    if let Some(file) = file{
+                        info!("file uploaded: {file:?}");
+                        let buff = file.array_buffer();
+                        let _promise = buff.then(&load_world_from_js_file);
+                    }
+
+                }
+                />
+
+            </li>
             <li on:click=|_|{
                 alert_todo("Sorry, 'Import world' not yet implemented")
-            }><a>Import World</a></li>
-            <li><a>Save World as</a></li>
-            <li><a>Copy World to clipboard</a></li>
+            }>
+                <a>Save World as</a>
+            </li>
+
+            <li on:click=|_|{
+                alert_todo("Sorry, 'Import world' not yet implemented")
+            }>
+                <a>Copy World to clipboard</a>
+            </li>
             <li on:click=move |_|{
                 set_show_info.set(true);
                 set_show_menu.set(false);
