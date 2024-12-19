@@ -419,7 +419,7 @@ pub struct Capabilites {
 //     size: f32,
 // }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ViewModel {
     pub cell_coords: Vec<[f32; 2]>,
     /// camera position in screen scale
@@ -457,6 +457,7 @@ impl crux_core::App for App {
     type ViewModel = ViewModel;
 
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
+        info!("got event: {event:?}");
         match event {
             Event::Render => {
                 caps.render.render();
