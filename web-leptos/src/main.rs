@@ -417,10 +417,8 @@ fn root_component() -> impl IntoView {
                                 start_notice_timer(());
                                 return;
                             };
-                            // alert_msg(&format!("data:\n{data:#?}"));
-                            alert_msg(&format!("data:\n{clipboard:#?}"));
                             if let Ok(txt) = std::str::from_utf8(&data) {
-                                clipboard.write_text("Hi there");
+                                let _promise = clipboard.write_text(txt);
                                 let msg = format!(
                                     "Copied: {} ...",
                                     txt.chars().take(30).collect::<String>()
@@ -538,6 +536,9 @@ fn root_component() -> impl IntoView {
               <button class="modal-close is-large" aria-label="close"
                 on:click=move |ev| set_show_info.set(false)
               />
+              <div>
+                  links
+              </div>
             </div>
 
     };
