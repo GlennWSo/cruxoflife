@@ -7,6 +7,7 @@ use crux_core::{macros::Effect, render::Render};
 use serde::{Deserialize, Serialize};
 
 mod capabilities;
+pub use capabilities::FileOperation;
 use capabilities::{Alert, FileIO};
 #[allow(unused)]
 // use log::{debug, error, info, warn};
@@ -408,7 +409,7 @@ pub struct Capabilites {
     pub render: Render<Event>,
     /// capable of asking shell to preform http requests
     alert: Alert<Event>,
-    file_io: FileIO<Event>,
+    pub file_io: FileIO<Event>,
 }
 
 // #[derive(Serialize, Deserialize, Clone)]

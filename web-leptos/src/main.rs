@@ -1,5 +1,7 @@
 mod core;
 
+use std::fmt::Debug;
+
 use cgmath::num_traits::Float;
 use cgmath::InnerSpace;
 use js_sys::ArrayBuffer;
@@ -20,8 +22,12 @@ use leptos_use::use_throttle_fn_with_arg;
 use leptos_use::use_window;
 use leptos_use::UseElementSizeReturn;
 use log::trace;
+use shared::FileOperation;
 use shared::Vec2;
 use wasm_bindgen::convert::IntoWasmAbi;
+use web_sys::Blob;
+use web_sys::MouseEvent;
+use web_sys::Url;
 use web_sys::{File, PointerEvent};
 
 use codee::string::{FromToStringCodec, JsonSerdeCodec};
@@ -348,6 +354,10 @@ fn root_component() -> impl IntoView {
         move |_, _, _| set_event.set(Event::Step),
         false,
     );
+
+    let export_node = NodeRef::<html::A>::new();
+    // let save_file = Closure::new(move |js: JsValue| {};
+
     let _event_processor = Effect::new(move || {
         let event = event.get();
         trace!("got event: {:#?}", event);
@@ -355,7 +365,26 @@ fn root_component() -> impl IntoView {
         for effect in effects {
             match effect {
                 shared::Effect::Alert(_) => todo!(),
-                shared::Effect::FileIO(_) => todo!(),
+                shared::Effect::FileIO(req) => {
+                    let op: FileOperation = req.operation;
+                    match op {
+                        FileOperation::Save(data) => {
+                            // let doc = document();
+                            // let res = web_sys::window().unwrap().show_save_file_picker().unwrap();
+                            let link = export_node
+                                .get()
+                                .expect("The Anchor must exist to preform the file save");
+                            let blob = gloo_file::Blob::new(data.as_slice());
+                            let url = gloo_file::ObjectUrl::from(blob);
+                            link.set_attribute("href", &url).unwrap();
+                            link.set_attribute("download", "exported_life.json")
+                                .unwrap();
+                            let click_event: web_sys::Event =
+                                MouseEvent::new("click").unwrap().into();
+                            link.dispatch_event(&click_event).unwrap();
+                        }
+                    };
+                }
                 shared::Effect::Render(_) => set_view.set(core.view()),
             }
         }
@@ -428,7 +457,7 @@ fn root_component() -> impl IntoView {
 
               </div>
               <button class="modal-close is-large" aria-label="close"
-                on:click=move |_| set_show_info.set(false)
+                on:click=move |ev| set_show_info.set(false)
               />
             </div>
 
@@ -467,6 +496,7 @@ fn root_component() -> impl IntoView {
             <label for="importworld">Import World </label>
             <input node_ref=input_element class="input" id="importworld" type="file"
                 on:change=move |ev|{
+                    set_show_menu.set(false);
                     let files = ev.target()
                         .expect("event target should exist")
                         .unchecked_ref::<web_sys::HtmlInputElement>()
@@ -485,8 +515,8 @@ fn root_component() -> impl IntoView {
                 />
 
             </li>
-            <li on:click=|_|{
-                alert_todo("Sorry, 'Import world' not yet implemented")
+            <li on:click=move |_|{
+                set_event.set(Event::SaveWorld);
             }>
                 <a>Save World as</a>
             </li>
@@ -506,6 +536,7 @@ fn root_component() -> impl IntoView {
     };
 
     view! { <main>
+    <a node_ref=export_node>Export link</a>
     {info_modal}
     {menu}
     <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh"
