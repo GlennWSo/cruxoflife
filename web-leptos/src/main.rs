@@ -318,7 +318,7 @@ fn GameCanvas(
 
     let handle_touchdown = move |ev: TouchEvent| {
         if let Some(avg) = avg_touch_pos(&ev) {
-            debug!("t start: {avg:?}");
+            set_camera_old.set(view.get().camera_pan);
             set_drag_start.set(Some([avg.x.floor() as i32, avg.y.floor() as i32]));
             set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
         }
@@ -360,7 +360,6 @@ fn GameCanvas(
         // if let Some(avg) = avg_touch_pos(&ev) {
         let start: Vec2 = drag_start.get().unwrap().map(|e| e as f32).into();
         let end: Vec2 = drag_end.get().map(|e| e as f32).into();
-        debug!("drag d: {:#?}", end - start);
 
         match drag_dist() {
             Some(dist) if dist > 10.0 => (),
@@ -368,9 +367,6 @@ fn GameCanvas(
         };
         set_drag_start.set(None);
         set_camera_old.set(view.get().camera_pan);
-        // click_handler(drag_end.get());
-        // window().alert();
-        // }
     };
 
     view! {
