@@ -592,15 +592,17 @@ fn root_component() -> impl IntoView {
     };
 
     view! { <main>
-    <a class="is-hidden" node_ref=export_node>Export link</a>
-    {info_modal}
-    <div class=notice_class style="position:relative; z-index:10">//"notification is-primary">
-        <button class="delete"
-            on:click=move |_| set_notice.update(|n| n.kind = NoticeKind::Hidden)
-        />
-        {move || notice.get().msg}
+    <div class="" style="position: absolute; width:100%; z-index=10;">
+        <a class="is-hidden" node_ref=export_node>Export link</a>
+        {info_modal}
+        <div class=notice_class style="position:relative; z-index:10">
+            <button class="delete"
+                on:click=move |_| set_notice.update(|n| n.kind = NoticeKind::Hidden)
+            />
+            {move || notice.get().msg}
+        </div>
+        {menu}
     </div>
-    {menu}
     <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh"
         on:click=move |ev| set_show_menu.set(false)>
     <GameCanvas view=view set_event=set_event is_touch=touch_device />
