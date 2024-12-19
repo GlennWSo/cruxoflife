@@ -384,8 +384,6 @@ fn root_component() -> impl IntoView {
     );
 
     let export_node = NodeRef::<html::A>::new();
-    let clip_node = NodeRef::<html::Input>::new();
-    // let save_file = Closure::new(move |js: JsValue| {};
     let (show_menu, set_show_menu) = signal(false);
     let (notice, set_notice) = signal(<Notice>::default());
 
@@ -561,8 +559,6 @@ fn root_component() -> impl IntoView {
     });
 
     let menu = view! {<>
-        <input node_ref=clip_node></input>
-
         <div class="buttons m-4"  style="position:absolute; z-index:3;" >
             <img alt="info" width="64px" src="/assets/menu-icon.svg" hidden=move||{show_menu.get()}
                 style="border:none; background:none; position:relative; z-index:1;"
