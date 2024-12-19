@@ -7,7 +7,7 @@ use crux_core::{macros::Effect, render::Render};
 use serde::{Deserialize, Serialize};
 
 mod capabilities;
-pub use capabilities::FileOperation;
+pub use capabilities::ExportOperation;
 use capabilities::{Alert, FileIO};
 #[allow(unused)]
 // use log::{debug, error, info, warn};
@@ -394,6 +394,7 @@ pub enum Event {
     ToggleCell(CellCoord),
     SpawnGlider(CellCoord),
     SaveWorld,
+    CopyWorld,
     LoadWorld(Vec<u8>),
     CameraPan([f32; 2]),
     CameraSize([f32; 2]),
@@ -468,7 +469,9 @@ impl crux_core::App for App {
             }
             Event::SaveWorld => {
                 caps.file_io.save(model);
-                caps.alert.info("save data sent to shell".to_string());
+            }
+            Event::CopyWorld => {
+                caps.file_io.copy(model);
             }
             Event::Echo(msg) => {
                 caps.alert.info(msg);

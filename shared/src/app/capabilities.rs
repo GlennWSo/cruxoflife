@@ -8,21 +8,22 @@ use super::{CellVector, Model};
 type Data = Vec<u8>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub enum FileOperation {
+pub enum ExportOperation {
     Save(Data),
+    Copy(Data),
 }
 
-impl Operation for FileOperation {
+impl Operation for ExportOperation {
     type Output = Option<CellVector>;
 }
 
 #[derive(Capability)]
 pub struct FileIO<Event> {
-    context: CapabilityContext<FileOperation, Event>,
+    context: CapabilityContext<ExportOperation, Event>,
 }
 
 impl<Event> FileIO<Event> {
-    pub fn new(context: CapabilityContext<FileOperation, Event>) -> Self {
+    pub fn new(context: CapabilityContext<ExportOperation, Event>) -> Self {
         Self { context }
     }
     pub fn save(&self, model: &Model)
@@ -34,7 +35,19 @@ impl<Event> FileIO<Event> {
         let data = to_vec(&data).unwrap();
         self.context.spawn(async move {
             // Instruct Shell to save some bytes of data
-            ctx.request_from_shell(FileOperation::Save(data)).await;
+            ctx.request_from_shell(ExportOperation::Save(data)).await;
+        })
+    }
+    pub fn copy(&self, model: &Model)
+    where
+        Event: 'static,
+    {
+        let ctx = self.context.clone();
+        let data = model.life.state_as_list();
+        let data = to_vec(&data).unwrap();
+        self.context.spawn(async move {
+            // Instruct Shell to save some bytes of data
+            ctx.request_from_shell(ExportOperation::Copy(data)).await;
         })
     }
 }

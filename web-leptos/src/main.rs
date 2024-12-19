@@ -1,6 +1,7 @@
 mod core;
 
 use std::fmt::Debug;
+use std::fmt::Display;
 
 use cgmath::num_traits::Float;
 use cgmath::InnerSpace;
@@ -22,7 +23,7 @@ use leptos_use::use_throttle_fn_with_arg;
 use leptos_use::use_window;
 use leptos_use::UseElementSizeReturn;
 use log::trace;
-use shared::FileOperation;
+use shared::ExportOperation;
 use shared::Vec2;
 use wasm_bindgen::convert::IntoWasmAbi;
 use web_sys::Blob;
@@ -61,6 +62,29 @@ into electronic typesetting, remaining essentially unchanged. It was popularised
 the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more
 recently with desktop publishing software like Aldus PageMaker including versions of
 Lorem Ipsum."#;
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+enum NoticeKind {
+    #[default]
+    Hidden,
+    Success,
+}
+
+impl Display for NoticeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let txt = match self {
+            NoticeKind::Hidden => "is-hidden",
+            NoticeKind::Success => "is-success",
+        };
+        write!(f, "{txt}")
+    }
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+struct Notice {
+    msg: String,
+    kind: NoticeKind,
+}
 
 fn is_touch_device(window: Window) -> bool {
     let navigator = window.navigator();
@@ -112,7 +136,7 @@ fn avg_touch_moved_pos(ev: &TouchEvent) -> Option<Vec2> {
     Some(avg)
 }
 
-fn alert_todo(msg: &str) {
+fn alert_msg(msg: &str) {
     let doc = document();
     // doc.window
     // let navi = use_window().navigator();
@@ -366,9 +390,17 @@ fn root_component() -> impl IntoView {
             match effect {
                 shared::Effect::Alert(_) => todo!(),
                 shared::Effect::FileIO(req) => {
-                    let op: FileOperation = req.operation;
+                    let op: ExportOperation = req.operation;
                     match op {
-                        FileOperation::Save(data) => {
+                        ExportOperation::Copy(data) => {
+                            let clipboard = window().navigator().clipboard();
+                            if let Ok(txt) = std::str::from_utf8(&data) {
+                                let _promise = clipboard.write_text(txt);
+                            } else {
+                                log::error!("failed to parsing world data");
+                            }
+                        }
+                        ExportOperation::Save(data) => {
                             let link = export_node
                                 .get()
                                 .expect("The Anchor must exist to preform the file save");
@@ -473,6 +505,7 @@ fn root_component() -> impl IntoView {
     };
 
     let (show_menu, set_show_menu) = signal(false);
+    let (notice, set_notice) = signal(<Notice>::default());
 
     let input_element: NodeRef<html::Input> = NodeRef::new();
 
@@ -491,6 +524,7 @@ fn root_component() -> impl IntoView {
     });
 
     let menu = view! {<>
+
         <div class="buttons m-4"  style="position:absolute; z-index:3;" >
             <img alt="info" width="64px" src="/assets/menu-icon.svg" hidden=move||{show_menu.get()}
                 style="border:none; background:none; position:relative; z-index:1;"
@@ -531,8 +565,15 @@ fn root_component() -> impl IntoView {
                 <a>Export World</a>
             </li>
 
-            <li on:click=|_|{
-                alert_todo("Sorry, 'Copy World to clipboard' is not yet implemented")
+            <li on:click=move |_|{
+                // alert_todo("Sorry, 'Copy World to clipboard' is not yet implemented")
+                set_event.set(Event::CopyWorld);
+                // alert_msg("world saved to clipboard"); // TODO impl nice embedded messages
+                let msg = "World saved to clipboard".to_string();
+                let kind = NoticeKind::Success;
+                set_show_menu.set(false);
+                set_notice.set(Notice{msg, kind});
+
             }>
                 <a class="has-text-grey">Copy World to clipboard</a>
             </li>
@@ -545,9 +586,20 @@ fn root_component() -> impl IntoView {
         </>
     };
 
+    let notice_class = move || {
+        let kind = notice.get().kind.to_string();
+        format!("notification {kind}")
+    };
+
     view! { <main>
     <a class="is-hidden" node_ref=export_node>Export link</a>
     {info_modal}
+    <div class=notice_class style="position:relative; z-index:10">//"notification is-primary">
+        <button class="delete"
+            on:click=move |_| set_notice.update(|n| n.kind = NoticeKind::Hidden)
+        />
+        {move || notice.get().msg}
+    </div>
     {menu}
     <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh"
         on:click=move |ev| set_show_menu.set(false)>
