@@ -467,12 +467,18 @@ fn root_component() -> impl IntoView {
             <label for="importworld">Import World </label>
             <input node_ref=input_element class="input" id="importworld" type="file"
                 on:change=move |ev|{
-                    let files = ev.target().unwrap().unchecked_ref::<web_sys::HtmlInputElement>().files().unwrap();
-                    let file  = files.get(0);
-                    if let Some(file) = file{
+                    let files = ev.target()
+                        .expect("event target should exist")
+                        .unchecked_ref::<web_sys::HtmlInputElement>()
+                        .files()
+                        .expect("target element must be input of type 'file'");
+
+                    if let Some(file) = files.get(0) {
                         info!("file uploaded: {file:?}");
                         let buff = file.array_buffer();
                         let _promise = buff.then(&load_world_from_js_file);
+                    } else{
+                        log::error!("Expected a file in the input element");
                     }
 
                 }
