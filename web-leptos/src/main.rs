@@ -20,8 +20,10 @@ use leptos_use::storage::UseStorageOptions;
 use leptos_use::use_element_size;
 use leptos_use::use_throttle_fn;
 use leptos_use::use_throttle_fn_with_arg;
+use leptos_use::use_timeout_fn;
 use leptos_use::use_window;
 use leptos_use::UseElementSizeReturn;
+use leptos_use::UseTimeoutFnReturn;
 use log::trace;
 use shared::ExportOperation;
 use shared::Vec2;
@@ -68,6 +70,7 @@ enum NoticeKind {
     #[default]
     Hidden,
     Success,
+    Error,
 }
 
 impl Display for NoticeKind {
@@ -75,6 +78,7 @@ impl Display for NoticeKind {
         let txt = match self {
             NoticeKind::Hidden => "is-hidden",
             NoticeKind::Success => "is-success",
+            NoticeKind::Error => "is-danger",
         };
         write!(f, "{txt}")
     }
@@ -380,7 +384,17 @@ fn root_component() -> impl IntoView {
     );
 
     let export_node = NodeRef::<html::A>::new();
+    let clip_node = NodeRef::<html::Input>::new();
     // let save_file = Closure::new(move |js: JsValue| {};
+    let (show_menu, set_show_menu) = signal(false);
+    let (notice, set_notice) = signal(<Notice>::default());
+
+    let close_notice = move || set_notice.update(|n| n.kind = NoticeKind::Hidden);
+
+    let UseTimeoutFnReturn {
+        start: start_notice_timer,
+        ..
+    } = use_timeout_fn(move |()| close_notice(), 5000.0);
 
     let _event_processor = Effect::new(move || {
         let event = event.get();
@@ -393,10 +407,35 @@ fn root_component() -> impl IntoView {
                     let op: ExportOperation = req.operation;
                     match op {
                         ExportOperation::Copy(data) => {
-                            let clipboard = window().navigator().clipboard();
+                            let clipboard = web_sys::window().unwrap().navigator().clipboard();
+
+                            if clipboard.is_undefined() {
+                                let kind = NoticeKind::Error;
+                                set_show_menu.set(false);
+                                set_notice.set(Notice {
+                                    msg: "Access to clipboard was denied".to_string(),
+                                    kind,
+                                });
+                                start_notice_timer(());
+                                return;
+                            };
+                            // alert_msg(&format!("data:\n{data:#?}"));
+                            alert_msg(&format!("data:\n{clipboard:#?}"));
                             if let Ok(txt) = std::str::from_utf8(&data) {
-                                let _promise = clipboard.write_text(txt);
+                                clipboard.write_text("Hi there");
+                                let msg = format!(
+                                    "Copied: {} ...",
+                                    txt.chars().take(30).collect::<String>()
+                                );
+                                let kind = NoticeKind::Success;
+                                set_show_menu.set(false);
+                                set_notice.set(Notice { msg, kind });
+                                start_notice_timer(());
                             } else {
+                                let msg = format!("failed to get world data as txt");
+                                let kind = NoticeKind::Success;
+                                set_show_menu.set(false);
+                                set_notice.set(Notice { msg, kind });
                                 log::error!("failed to parsing world data");
                             }
                         }
@@ -409,6 +448,7 @@ fn root_component() -> impl IntoView {
                             link.set_attribute("href", &url).unwrap();
                             link.set_attribute("download", "exported_life.json")
                                 .unwrap();
+                            // link.query_selector
                             let click_event: web_sys::Event =
                                 MouseEvent::new("click").unwrap().into();
                             link.dispatch_event(&click_event).unwrap();
@@ -504,9 +544,6 @@ fn root_component() -> impl IntoView {
 
     };
 
-    let (show_menu, set_show_menu) = signal(false);
-    let (notice, set_notice) = signal(<Notice>::default());
-
     let input_element: NodeRef<html::Input> = NodeRef::new();
 
     let load_world_from_js_file = Closure::new(move |js: JsValue| {
@@ -524,6 +561,7 @@ fn root_component() -> impl IntoView {
     });
 
     let menu = view! {<>
+        <input node_ref=clip_node></input>
 
         <div class="buttons m-4"  style="position:absolute; z-index:3;" >
             <img alt="info" width="64px" src="/assets/menu-icon.svg" hidden=move||{show_menu.get()}
@@ -569,10 +607,6 @@ fn root_component() -> impl IntoView {
                 // alert_todo("Sorry, 'Copy World to clipboard' is not yet implemented")
                 set_event.set(Event::CopyWorld);
                 // alert_msg("world saved to clipboard"); // TODO impl nice embedded messages
-                let msg = "World saved to clipboard".to_string();
-                let kind = NoticeKind::Success;
-                set_show_menu.set(false);
-                set_notice.set(Notice{msg, kind});
 
             }>
                 <a class="has-text-grey">Copy World to clipboard</a>
@@ -592,12 +626,12 @@ fn root_component() -> impl IntoView {
     };
 
     view! { <main>
-    <div class="" style="position: absolute; width:100%; z-index=10;">
+    <div class="p-4" style="position: absolute; width:100%; z-index=10;">
         <a class="is-hidden" node_ref=export_node>Export link</a>
         {info_modal}
-        <div class=notice_class style="position:relative; z-index:10">
+        <div class=notice_class style="position:relative; z-index:10; display:flex; justify-content:center;">
             <button class="delete"
-                on:click=move |_| set_notice.update(|n| n.kind = NoticeKind::Hidden)
+                on:click=move |_| close_notice()
             />
             {move || notice.get().msg}
         </div>
