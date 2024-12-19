@@ -169,19 +169,43 @@ fn GameCanvas(
 
     let (drag_start, set_drag_start) = signal(DragStart::default());
     let (drag_end, set_drag_end) = signal([0_i32, 0]);
-    let (camera_old, set_camera_old) = signal([0_f32, 0.0]);
+
+    let drag_vector = move || {
+        let Some(start) = drag_start.get() else {
+            return None;
+        };
+        let start = Vec2::new(start[0] as f32, start[1] as f32);
+        let end = drag_end.get();
+        let end = Vec2::new(end[0] as f32, end[1] as f32);
+        let vector = end - start;
+        Some(vector)
+    };
+
+    let drag_dist = move || {
+        let Some(start) = drag_start.get() else {
+            return None;
+        };
+        let start = Vec2::new(start[0] as f32, start[1] as f32);
+        let end = drag_end.get();
+        let end = Vec2::new(end[0] as f32, end[1] as f32);
+        Some((end - start).magnitude())
+    };
     let (zoom_pow, set_zoom_pow) = signal(1_f32);
     let (zoom, set_zoom) = signal(1_f32);
-    Effect::new(move |old_v: Option<f32>| {
+    let camera_pan = view.get().camera_pan;
+    let (camera_old, set_camera_old) = signal(camera_pan);
+    info!("derp: {camera_pan:#?}");
+    // set_event.set(Event::CameraPanZoom([camera_pan[0], camera_pan[1], 1.0]));
+    let camera_effects = Effect::new(move |old_v: Option<f32>| {
         let old_v = old_v.unwrap_or(1.0);
         let zoom = zoom.get();
-        if let Some(start_pos) = drag_start.get() {
-            let end_pos = drag_end.get();
-            let drag = [end_pos[0] - start_pos[0], end_pos[1] - start_pos[1]];
-            let drag = drag.map(|e| e as f32);
+        if let Some(drag) = drag_vector() {
             let old_cam = camera_old.get();
-            let new_pos = [old_cam[0] - drag[0], old_cam[1] - drag[1]];
-            set_event.set(Event::CameraPanZoom([new_pos[0], new_pos[1], zoom]));
+            let new_pos = [old_cam[0] - drag.x, old_cam[1] - drag.y];
+            let cam_update = [new_pos[0], new_pos[1], zoom];
+            info!("old_pan: {old_cam:#?}");
+            info!("cam update {cam_update:#?}");
+            set_event.set(Event::CameraPanZoom(cam_update));
             zoom
         } else {
             if zoom != old_v {
@@ -271,15 +295,18 @@ fn GameCanvas(
 
     let handle_pointerup = move |ev: PointerEvent| {
         if !is_touch {
+            match drag_dist() {
+                Some(dist) if dist > 10.0 => (),
+                _ => click_handler([ev.offset_x(), ev.offset_y()]),
+            };
             set_drag_start.set(None);
             set_camera_old.set(view.get().camera_pan);
-            click_handler([ev.offset_x(), ev.offset_y()]);
-            // window().alert_with_message("derp");
-            // panic!();
         }
     };
     let handle_pointerdown = move |ev: PointerEvent| {
         if !is_touch {
+            set_camera_old.set(view.get().camera_pan);
+            set_drag_end.set([ev.offset_x(), ev.offset_y()]);
             set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
         }
     };
@@ -322,7 +349,7 @@ fn GameCanvas(
             set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
             ev.prevent_default();
             if let Some(zoom) = pinch2zoom(&ev) {
-                // set_event.set(Event::CameraZoom(zoom));
+                set_event.set(Event::CameraZoom(zoom));
                 set_zoom.set(zoom);
             };
 
@@ -335,9 +362,13 @@ fn GameCanvas(
         let end: Vec2 = drag_end.get().map(|e| e as f32).into();
         debug!("drag d: {:#?}", end - start);
 
+        match drag_dist() {
+            Some(dist) if dist > 10.0 => (),
+            _ => click_handler(drag_end.get()),
+        };
         set_drag_start.set(None);
         set_camera_old.set(view.get().camera_pan);
-        click_handler(drag_end.get());
+        // click_handler(drag_end.get());
         // window().alert();
         // }
     };
