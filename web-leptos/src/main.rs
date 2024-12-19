@@ -369,8 +369,6 @@ fn root_component() -> impl IntoView {
                     let op: FileOperation = req.operation;
                     match op {
                         FileOperation::Save(data) => {
-                            // let doc = document();
-                            // let res = web_sys::window().unwrap().show_save_file_picker().unwrap();
                             let link = export_node
                                 .get()
                                 .expect("The Anchor must exist to preform the file save");
@@ -439,6 +437,17 @@ fn root_component() -> impl IntoView {
                 <li>"Cells that have 2 or 3 neighbors survive"</li>
                 <li>"Empty regions spawn new cells if they have 3 neighbors"</li>
             </ul>
+            <p>
+            While the rules are simple, how a given pattern will evolve is very hard to predict.
+            Now close this window draw some patterns and experiment!
+            </p>
+            <div class="mt-4 container is-justify-content-center is-flex">
+            <button class="button is-primary"
+            on:click=move |_ev| set_show_info.set(false)>
+                "Let's play"
+            </button>
+            </div>
+
         </section>
     };
 
@@ -492,9 +501,9 @@ fn root_component() -> impl IntoView {
             style="position:absolute; z-index:3; border-radius:0.6em;">
           <p class="menu-label">Genereal</p>
           <ul class="menu-list">
-            <li>
+            <li><a>
             <label for="importworld">Import World </label>
-            <input node_ref=input_element class="input" id="importworld" type="file"
+            <input node_ref=input_element class="input is-hidden" id="importworld" type="file"
                 on:change=move |ev|{
                     set_show_menu.set(false);
                     let files = ev.target()
@@ -513,18 +522,19 @@ fn root_component() -> impl IntoView {
 
                 }
                 />
+            </a>
 
             </li>
             <li on:click=move |_|{
                 set_event.set(Event::SaveWorld);
             }>
-                <a>Save World as</a>
+                <a>Export World</a>
             </li>
 
             <li on:click=|_|{
-                alert_todo("Sorry, 'Import world' not yet implemented")
+                alert_todo("Sorry, 'Copy World to clipboard' is not yet implemented")
             }>
-                <a>Copy World to clipboard</a>
+                <a class="has-text-grey">Copy World to clipboard</a>
             </li>
             <li on:click=move |_|{
                 set_show_info.set(true);
@@ -536,7 +546,7 @@ fn root_component() -> impl IntoView {
     };
 
     view! { <main>
-    <a node_ref=export_node>Export link</a>
+    <a class="is-hidden" node_ref=export_node>Export link</a>
     {info_modal}
     {menu}
     <section class="section pt-5 has-text-centered" style="display:flex; flex-direction:column; justify-content:space-between; height:100vh"
