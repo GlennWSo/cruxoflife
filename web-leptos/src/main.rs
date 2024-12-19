@@ -628,12 +628,9 @@ fn root_component() -> impl IntoView {
             </li>
 
             <li on:click=move |_|{
-                // alert_todo("Sorry, 'Copy World to clipboard' is not yet implemented")
                 set_event.set(Event::CopyWorld);
-                // alert_msg("world saved to clipboard"); // TODO impl nice embedded messages
-
             }>
-                <a class="has-text-grey">Copy World to clipboard</a>
+                <a>Copy World to clipboard</a>
             </li>
             <li on:click=move |_|{
                 set_show_info.set(true);
