@@ -560,7 +560,7 @@ fn root_component() -> impl IntoView {
             </button>
             <button class="button is-warning"
                 on:click=move |_| {
-                    set_run.update(|state| *state = !*state);
+                    set_run.update(|state| *state = false);
                     set_event.update(|value| *value = Event::Step);
                 }>
                 "Step"
