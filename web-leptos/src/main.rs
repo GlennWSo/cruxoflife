@@ -54,7 +54,7 @@ use web_sys::TouchEvent;
 use web_sys::WheelEvent;
 use web_sys::Window;
 
-type DragStart = Option<[i32; 2]>;
+type DragStart = Option<Vec2>;
 
 const LOREM_IPSUM: &'static str = r#"Lorem Ipsum is simply dummy text of the printing
  and typesetting industry. Lorem Ipsum has been the industry's standard dummy text
@@ -167,58 +167,54 @@ fn GameCanvas(
         set_event.set(Event::CameraSize([width, height]));
     });
 
-    let (drag_start, set_drag_start) = signal(DragStart::default());
-    let (drag_end, set_drag_end) = signal([0_i32, 0]);
+    let (drag_start, set_drag_start) = signal(false);
+    // let drag_start = use_throttle_fn( 10)
+    let (drag_end, set_drag_end) = signal([0_f32, 0.0]);
 
-    let drag_vector = move || {
-        let Some(start) = drag_start.get() else {
-            return None;
-        };
-        let start = Vec2::new(start[0] as f32, start[1] as f32);
-        let end = drag_end.get();
-        let end = Vec2::new(end[0] as f32, end[1] as f32);
-        let vector = end - start;
-        Some(vector)
-    };
+    // let drag_vector = move || {
+    //     let Some(start) = drag_start.get() else {
+    //         return None;
+    //     };
+    //     let start: Vec2 = start.into();
+    //     let end: Vec2 = drag_end.get().into();
+    //     let vector = end - start;
+    //     Some(vector)
+    // };
 
-    let drag_dist = move || {
-        let Some(start) = drag_start.get() else {
-            return None;
-        };
-        let start = Vec2::new(start[0] as f32, start[1] as f32);
-        let end = drag_end.get();
-        let end = Vec2::new(end[0] as f32, end[1] as f32);
-        Some((end - start).magnitude())
-    };
+    // let drag_dist = move || {
+    //     let Some(start) = drag_start.get() else {
+    //         return None;
+    //     };
+    //     let start = Vec2::new(start[0] as f32, start[1] as f32);
+    //     let end = drag_end.get();
+    //     let end = Vec2::new(end[0] as f32, end[1] as f32);
+    //     Some((end - start).magnitude())
+    // };
     let (zoom_pow, set_zoom_pow) = signal(1_f32);
     let (zoom, set_zoom) = signal(1_f32);
-    let camera_pan = view.get().camera_pan;
-    let (camera_old, set_camera_old) = signal(camera_pan);
-    info!("derp: {camera_pan:#?}");
     // set_event.set(Event::CameraPanZoom([camera_pan[0], camera_pan[1], 1.0]));
-    let camera_effects = Effect::new(move |old_v: Option<f32>| {
-        let old_v = old_v.unwrap_or(1.0);
+    let _send_camera_events = Effect::new(move |old_v: Option<f32>| {
+        // let old_v = old_v.unwrap_or(1.0);
         let zoom = zoom.get();
-        if let Some(drag) = drag_vector() {
-            let old_cam = camera_old.get();
-            let new_pos = [old_cam[0] - drag.x, old_cam[1] - drag.y];
-            let cam_update = [new_pos[0], new_pos[1], zoom];
-            info!("old_pan: {old_cam:#?}");
-            info!("cam update {cam_update:#?}");
-            set_event.set(Event::CameraPanZoom(cam_update));
+        if drag_start.get() {
+            // let old_cam = view.get().camera_pan;
+            // let new_pos = [old_cam[0] - drag.x, old_cam[1] - drag.y];
+            let drag = drag_end.get();
+
+            let cam_update = [drag[0], drag[1], zoom];
+            // info!("cam update {cam_update:#?}");
+            set_event.set(Event::ChangePanZoom(cam_update));
             zoom
         } else {
-            if zoom != old_v {
-                set_event.set(Event::CameraZoom(zoom));
-            }
+            // if zoom != old_v {
+            //     set_event.set(Event::CameraZoom(zoom));
+            // }
             zoom
         }
     });
 
     let wheel_handler = use_throttle_fn_with_arg(
         move |dy: f64| {
-            set_camera_old.set(view.get().camera_pan);
-
             set_zoom_pow.update(|old_pow| {
                 let dy = dy as f32;
                 let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
@@ -230,7 +226,7 @@ fn GameCanvas(
         20.0,
     );
 
-    Effect::new(move |_| {
+    let _draw = Effect::new(move |_| {
         if let Some(canvas) = canvas_ref.get() {
             let width = width.get() as f64;
             let height = height.get() as f64;
@@ -288,85 +284,75 @@ fn GameCanvas(
             }
         }
     });
-    let click_handler = move |location: [i32; 2]| {
+    let click_handler = move |location: [f32; 2]| {
         trace!("location: {:?}", location);
-        set_event.set(Event::ToggleScreenCoord(location.map(|e| e as f32)))
+        set_event.set(Event::ToggleScreenCoord(location))
     };
 
     let handle_pointerup = move |ev: PointerEvent| {
         if !is_touch {
-            match drag_dist() {
-                Some(dist) if dist > 10.0 => (),
-                _ => click_handler([ev.offset_x(), ev.offset_y()]),
-            };
-            set_drag_start.set(None);
-            set_camera_old.set(view.get().camera_pan);
+            // match drag_dist() {
+            //     Some(dist) if dist > 10.0 => (),
+            //     _ => click_handler([ev.offset_x() as f32, ev.offset_y() as f32]),
+            // };
+            set_drag_start.set(false);
         }
     };
     let handle_pointerdown = move |ev: PointerEvent| {
         if !is_touch {
-            set_camera_old.set(view.get().camera_pan);
-            set_drag_end.set([ev.offset_x(), ev.offset_y()]);
-            set_drag_start.set(Some([ev.offset_x(), ev.offset_y()]));
+            set_drag_end.set([ev.offset_x() as f32, ev.offset_y() as f32]);
+            set_drag_start.set(true);
         }
     };
     let handle_pointermove = move |ev: PointerEvent| {
         if !is_touch {
-            set_drag_end.set([ev.offset_x(), ev.offset_y()]);
+            set_drag_end.set([ev.offset_x() as f32, ev.offset_y() as f32]);
         }
     };
 
     let handle_touchdown = move |ev: TouchEvent| {
         if let Some(avg) = avg_touch_pos(&ev) {
-            set_camera_old.set(view.get().camera_pan);
-            set_drag_start.set(Some([avg.x.floor() as i32, avg.y.floor() as i32]));
-            set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
+            let pos = [avg.x, avg.y];
+            set_event.set(Event::AnchorDrag(pos));
+            set_drag_start.set(true);
+            set_drag_end.set(pos);
         }
     };
     let (touch_spread, set_spread) = signal(Option::<f32>::default());
 
-    let pinch2zoom = move |ev: &TouchEvent| -> Option<f32> {
+    let pinch2zoom = move |ev: &TouchEvent| -> f32 {
         let new_spread = avg_touch_spread(ev);
-        let Some(mut spread) = new_spread else {
+        let Some(spread) = new_spread else {
             set_spread.set(None);
-            return None;
+            return 1.0;
         };
         let Some(old_spread) = touch_spread.get() else {
             set_spread.set(Some(spread));
-            return None;
+            return 1.0;
         };
         set_spread.set(Some(spread));
-        set_zoom.update(|zoom| {
-            *zoom = *zoom * spread / old_spread;
-            spread = *zoom;
-        });
-        Some(spread)
+        let zoom_change = spread / old_spread;
+        zoom_change
     };
 
     let handle_touchmove = move |ev: TouchEvent| {
         if let Some(avg) = avg_touch_pos(&ev) {
-            debug!("t move: {avg:?}");
-            set_drag_end.set([avg.x.floor() as i32, avg.y.floor() as i32]);
             ev.prevent_default();
-            if let Some(zoom) = pinch2zoom(&ev) {
-                set_event.set(Event::CameraZoom(zoom));
-                set_zoom.set(zoom);
-            };
-
-            // ev.cancel_bubble();
+            // debug!("t move: {avg:?}");m
+            set_drag_end.set([avg.x, avg.y]);
+            set_zoom.set(pinch2zoom(&ev));
+            // let zoom_change = pinch2zoom(&ev);
+            // let new_pos = [avg.x.floor(), avg.y.floor(), zoom_change];
+            // set_event.set(Event::ChangePanZoom(new_pos));
+            // set_drag_start.set(Some(pos));
         }
     };
     let handle_touchup = move |_ev: TouchEvent| {
-        // if let Some(avg) = avg_touch_pos(&ev) {
-        let start: Vec2 = drag_start.get().unwrap().map(|e| e as f32).into();
-        let end: Vec2 = drag_end.get().map(|e| e as f32).into();
-
-        match drag_dist() {
-            Some(dist) if dist > 10.0 => (),
-            _ => click_handler(drag_end.get()),
-        };
-        set_drag_start.set(None);
-        set_camera_old.set(view.get().camera_pan);
+        // match drag_dist() {
+        //     Some(dist) if dist > 10.0 => (),
+        //     _ => click_handler(drag_end.get()),
+        // };
+        set_drag_start.set(false);
     };
 
     view! {
@@ -392,6 +378,7 @@ fn root_component() -> impl IntoView {
 
     let (event, set_event) = signal(Event::Render);
     let (view, set_view) = signal(core.view());
+    let view = Memo::new(move |_| view.get());
 
     let (running, set_run) = signal(false);
     let millis = 15;

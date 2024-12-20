@@ -295,15 +295,19 @@ struct Camera {
     screen_size: Vec2,
     /// camera pos in world space
     pan: Vec2,
+    /// drag start in world space
+    drag_start: Vec2,
     /// (world_size) * zoom = screen_size
     zoom: f32,
 }
 impl Default for Camera {
     fn default() -> Self {
         let screen_size = Vec2::new(300.0, 300.0);
+        let pan = -screen_size / 2.0;
         Self {
             screen_size,
-            pan: -screen_size / 2.0,
+            pan,
+            drag_start: Vec2::new(0.0, 0.0),
             zoom: 1.0,
         }
     }
@@ -352,11 +356,24 @@ impl Camera {
     fn pan(&self) -> Vec2 {
         self.pan * self.zoom
     }
+    fn set_drag_start(&mut self, screen_pos: Vec2) {
+        self.drag_start = self.screen2world(&screen_pos);
+    }
+
+    /// camera offset in screen space
+    fn drag_start(&self) -> Vec2 {
+        self.drag_start * self.zoom
+    }
 
     fn set_cam_pos(&mut self, new_pos: impl Into<Vec2>) {
         let new_pos: Vec2 = new_pos.into();
         self.pan = new_pos / self.zoom;
     }
+    fn drag_cam(&mut self, screen_drag: Vec2) {
+        let new_pos = -screen_drag / self.zoom + self.drag_start;
+        self.pan = new_pos;
+    }
+
     fn set_zoom(&mut self, new_zoom: f32) {
         self.pan += self.screen_size / self.zoom - self.screen_size / new_zoom;
         self.zoom = new_zoom;
@@ -387,6 +404,7 @@ mod test_camera_transforms {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[allow(deprecated)]
 pub enum Event {
     Render,
     Step,
@@ -399,7 +417,12 @@ pub enum Event {
     CameraPan([f32; 2]),
     CameraSize([f32; 2]),
     CameraZoom(f32),
+    #[deprecated]
     CameraPanZoom([f32; 3]),
+    /// pan change + new zoom setting
+    ChangePanZoom([f32; 3]),
+    /// signal camera drag stop
+    AnchorDrag([f32; 2]),
     ToggleScreenCoord([f32; 2]),
 }
 
@@ -419,7 +442,7 @@ pub struct Capabilites {
 //     size: f32,
 // }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ViewModel {
     pub cell_coords: Vec<[f32; 2]>,
     /// camera position in screen scale
@@ -507,6 +530,7 @@ impl crux_core::App for App {
                 model.camera.set_zoom(z);
                 caps.render.render()
             }
+            #[allow(deprecated)]
             Event::CameraPanZoom(data) => {
                 // val center = cameraOffset + Offset(cSize.width, cSize.height) * zoom / 2f
                 let pan: Vec2 = [data[0], data[1]].into();
@@ -515,6 +539,21 @@ impl crux_core::App for App {
                 model.camera.set_zoom(data[2]);
                 caps.render.render();
             }
+            Event::ChangePanZoom(data) => {
+                let drag: Vec2 = [data[0], data[1]].into();
+                let delta_pan = model.camera.drag_start - drag;
+                let zoom_change = data[2];
+                let new_pos = model.camera.pan() + delta_pan;
+                info!(
+                    "pzoom: drag:{:?}, drag_start:{:?}, pos:{:?}, delta:{:?}",
+                    drag, model.camera.drag_start, model.camera.pan, delta_pan
+                );
+                model.camera.drag_cam(drag);
+                let new_zoom = model.camera.zoom * zoom_change;
+                model.camera.set_zoom(new_zoom);
+                caps.render.render();
+            }
+            Event::AnchorDrag(screen_start) => model.camera.set_drag_start(screen_start.into()),
         }
     }
 
