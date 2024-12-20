@@ -416,9 +416,11 @@ pub enum Event {
     LoadWorld(Vec<u8>),
     CameraPan([f32; 2]),
     CameraSize([f32; 2]),
+    #[deprecated]
     CameraZoom(f32),
     #[deprecated]
     CameraPanZoom([f32; 3]),
+    ChangeZoom(f32),
     /// pan change + new zoom setting
     ChangePanZoom([f32; 3]),
     /// signal camera drag stop
@@ -554,6 +556,11 @@ impl crux_core::App for App {
                 caps.render.render();
             }
             Event::AnchorDrag(screen_start) => model.camera.set_drag_start(screen_start.into()),
+            Event::ChangeZoom(zchange) => {
+                let new_zoom = model.camera.zoom * zchange;
+                model.camera.set_zoom(new_zoom);
+                caps.render.render();
+            }
         }
     }
 

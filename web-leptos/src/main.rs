@@ -194,7 +194,7 @@ fn GameCanvas(
     let (zoom_pow, set_zoom_pow) = signal(1_f32);
     let (zoom, set_zoom) = signal(1_f32);
     // set_event.set(Event::CameraPanZoom([camera_pan[0], camera_pan[1], 1.0]));
-    let _send_camera_events = Effect::new(move |old_v: Option<f32>| {
+    let _send_camera_events = Effect::new(move |_old_v: Option<f32>| {
         // let old_v = old_v.unwrap_or(1.0);
         let zoom = zoom.get();
         if drag_start.get() {
@@ -207,22 +207,18 @@ fn GameCanvas(
             set_event.set(Event::ChangePanZoom(cam_update));
             zoom
         } else {
-            // if zoom != old_v {
-            //     set_event.set(Event::CameraZoom(zoom));
-            // }
+            if zoom != 1.0 {
+                set_event.set(Event::ChangeZoom(zoom));
+            }
             zoom
         }
     });
 
     let wheel_handler = use_throttle_fn_with_arg(
         move |dy: f64| {
-            set_zoom_pow.update(|old_pow| {
-                let dy = dy as f32;
-                let new_pow = (*old_pow + dy / 2000.0).clamp(-4.0, 4.0);
-                let zoom = 2.0.powf(new_pow) / 2.0;
-                *old_pow = new_pow;
-                set_zoom.set(zoom);
-            });
+            let dy = dy as f32;
+            let zoom = 2.0.powf(1.0 + dy / 600.0) / 2.0;
+            set_zoom.set(zoom);
         },
         20.0,
     );
@@ -316,6 +312,7 @@ fn GameCanvas(
     };
     let handle_pointermove = move |ev: PointerEvent| {
         if !is_touch {
+            set_zoom.set(1.0);
             set_drag_end.set([ev.offset_x() as f32, ev.offset_y() as f32]);
         }
     };
