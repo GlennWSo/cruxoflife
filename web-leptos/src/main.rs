@@ -2,6 +2,7 @@ mod core;
 
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::time::Duration;
 
 use cgmath::num_traits::Float;
 use cgmath::InnerSpace;
@@ -284,23 +285,32 @@ fn GameCanvas(
             }
         }
     });
+
+    let (short_press, set_short_press) = signal(false);
+
     let click_handler = move |location: [f32; 2]| {
-        trace!("location: {:?}", location);
-        set_event.set(Event::ToggleScreenCoord(location))
+        info!("location: {:?}", location);
+        if short_press.get() {
+            set_event.set(Event::ToggleScreenCoord(location))
+        }
     };
 
     let handle_pointerup = move |ev: PointerEvent| {
         if !is_touch {
-            // match drag_dist() {
-            //     Some(dist) if dist > 10.0 => (),
-            //     _ => click_handler([ev.offset_x() as f32, ev.offset_y() as f32]),
-            // };
+            click_handler([ev.offset_x() as f32, ev.offset_y() as f32]);
             set_drag_start.set(false);
         }
     };
     let handle_pointerdown = move |ev: PointerEvent| {
         if !is_touch {
-            set_drag_end.set([ev.offset_x() as f32, ev.offset_y() as f32]);
+            set_short_press.set(true);
+            set_timeout(
+                move || set_short_press.set(false),
+                Duration::from_millis(300),
+            );
+            let pos = [ev.offset_x() as f32, ev.offset_y() as f32];
+            set_drag_end.set(pos);
+            set_event.set(Event::AnchorDrag(pos));
             set_drag_start.set(true);
         }
     };
@@ -311,6 +321,11 @@ fn GameCanvas(
     };
 
     let handle_touchdown = move |ev: TouchEvent| {
+        set_short_press.set(true);
+        set_timeout(
+            move || set_short_press.set(false),
+            Duration::from_millis(300),
+        );
         if let Some(avg) = avg_touch_pos(&ev) {
             let pos = [avg.x, avg.y];
             set_event.set(Event::AnchorDrag(pos));
@@ -338,20 +353,12 @@ fn GameCanvas(
     let handle_touchmove = move |ev: TouchEvent| {
         if let Some(avg) = avg_touch_pos(&ev) {
             ev.prevent_default();
-            // debug!("t move: {avg:?}");m
             set_drag_end.set([avg.x, avg.y]);
             set_zoom.set(pinch2zoom(&ev));
-            // let zoom_change = pinch2zoom(&ev);
-            // let new_pos = [avg.x.floor(), avg.y.floor(), zoom_change];
-            // set_event.set(Event::ChangePanZoom(new_pos));
-            // set_drag_start.set(Some(pos));
         }
     };
     let handle_touchup = move |_ev: TouchEvent| {
-        // match drag_dist() {
-        //     Some(dist) if dist > 10.0 => (),
-        //     _ => click_handler(drag_end.get()),
-        // };
+        click_handler(drag_end.get());
         set_drag_start.set(false);
     };
 
