@@ -653,7 +653,7 @@ fn root_component() -> impl IntoView {
         on:click=move |ev| set_show_menu.set(false)>
     <GameCanvas view=view set_event=set_event is_touch=touch_device />
     <div/> // spacer
-        <div class="buttons is-centered mb-5">
+        <div class="buttons is-centered mb-5 is-flex" style="position:absolute; bottom: 5dvh; justify-content: center; width:100%;">
             <button class="button is-success" class:is-danger=running
             on:click=move |_| set_run.update(|state| *state = !*state)>
                 {move || if running.get() {"Stop"} else {"Run"}}
